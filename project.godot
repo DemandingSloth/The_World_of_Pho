@@ -51,7 +51,7 @@ GuildStockpile="*res://scripts/guilds/guild_stockpile_data.gd"
 GuildLeaderboard="*res://scripts/guilds/guild_leaderboard_data.gd"
 GuildProduction="*res://scripts/guilds/guild_production_data.gd"
 GuildStore="*res://scripts/guilds/guild_store_data.gd"
-MoneyGun="*res://scripts/money_gun_data.gd"
+MoneyGun="*res://scripts/money_gun/money_gun_data.gd"
 HorseRacing="*res://scripts/horse_racing/horse_racing_data.gd"
 
 [display]

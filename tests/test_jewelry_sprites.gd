@@ -21,7 +21,7 @@ func _process(_delta: float) -> bool:
 	print(" Jewelry Sprite Wiring Smoke Test")
 	print("========================================\n")
 
-	var reg = load("res://scripts/marketplace/item_key_registry.gd")
+	var reg = load("res://scripts/items/item_key_registry.gd")
 	var pd = root.get_node_or_null("PlayerData")
 	if reg == null or pd == null:
 		printerr("[FAIL] ItemKeyRegistry or PlayerData unavailable")
