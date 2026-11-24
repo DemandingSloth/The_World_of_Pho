@@ -91,7 +91,7 @@ func _test_each_def(pd) -> void:
 ## Loads the ItemKeyRegistry class at RUNTIME (avoids a --script compile-time
 ## static reference that can't see the PlayerData autoload global).
 func _reg():
-	return load("res://scripts/marketplace/item_key_registry.gd")
+	return load("res://scripts/items/item_key_registry.gd")
 
 
 func _test_registry_item_keys(pd) -> void:
