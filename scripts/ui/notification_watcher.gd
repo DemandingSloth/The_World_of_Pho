@@ -199,38 +199,53 @@ func _check_garden() -> void:
 	if garden == null:
 		return
 
-	## Count how many rows are "ready" (>= 3/4 of their planted columns harvestable).
-	var needed: int = int(ceil(garden.garden_cols * GARDEN_ROW_READY_FRACTION))
-	var ready_rows := 0
-	for r in range(garden.garden_rows):
-		var planted := 0
-		var ready := 0
-		for c in range(garden.garden_cols):
-			if r < garden.grid.size() and c < garden.grid[r].size() and garden.grid[r][c] != null:
-				planted += 1
-				if garden.is_harvestable(r, c):
-					ready += 1
-		if planted > 0 and ready >= needed:
-			ready_rows += 1
-
 	## Threshold is a row count; 0 means "the whole garden" (all current rows).
+	## Checked for each owned garden (Garden 1 and, if bought, Garden 2) no
+	## matter which one is being viewed.
 	var threshold: int = PlayerData.get_notification_threshold("garden")
-	var target: int = garden.garden_rows if threshold <= 0 else mini(threshold, garden.garden_rows)
-	target = maxi(1, target)
+	var gardens: Array = garden.get_owned_gardens()
+	var ready_names: Array = []
+	var ready_rows_total := 0
+	for g in gardens:
+		var rows: int = int(g["rows"])
+		var cols: int = int(g["cols"])
+		var cells: Array = g["grid"]
+		## A row is "ready" when >= 3/4 of its columns are harvestable.
+		var needed: int = int(ceil(cols * GARDEN_ROW_READY_FRACTION))
+		var ready_rows := 0
+		for r in range(mini(rows, cells.size())):
+			var planted := 0
+			var ready := 0
+			for c in range(mini(cols, cells[r].size())):
+				var cell = cells[r][c]
+				if cell != null:
+					planted += 1
+					if garden.is_cell_harvestable(cell):
+						ready += 1
+			if planted > 0 and ready >= needed:
+				ready_rows += 1
+		var target: int = rows if threshold <= 0 else mini(threshold, rows)
+		target = maxi(1, target)
+		if ready_rows >= target:
+			ready_names.append("Garden %d" % (int(g["index"]) + 1))
+			ready_rows_total += ready_rows
 
-	if ready_rows >= target and not _garden_notified:
+	if not ready_names.is_empty() and not _garden_notified:
 		_garden_notified = true
+		## Only name the garden when the player owns more than one.
+		var where: String = "Your whole garden" if gardens.size() <= 1 else " & ".join(ready_names)
 		if threshold <= 0:
 			GameNotification.show_message(
 				"🌾 Garden Ready",
-				"Your whole garden is ready to harvest!",
+				"%s %s ready to harvest!" % [where, "are" if ready_names.size() > 1 else "is"],
 				"", "garden")
 		else:
+			var suffix: String = "" if gardens.size() <= 1 else " in " + " & ".join(ready_names)
 			GameNotification.show_message(
 				"🌾 Garden Ready",
-				"%d rows are ready to harvest!" % ready_rows,
+				"%d rows are ready to harvest%s!" % [ready_rows_total, suffix],
 				"", "garden")
-	elif ready_rows < target:
+	elif ready_names.is_empty():
 		_garden_notified = false
 
 

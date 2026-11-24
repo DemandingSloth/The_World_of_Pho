@@ -100,6 +100,12 @@ const SUGGESTED_LIST_PRICE := {
 
 ## Suggested default list price for an item key (falls back to DEFAULT_LIST_PRICE).
 func _suggested_list_price(key: String) -> int:
+	## Food recipes: suggest the guild storefront floor, ceil(token_value × 0.5)
+	## (same 50% floor as _store_min_price / migration 098).
+	if key.begins_with("item:"):
+		var rdef := PlayerData.get_recipe_def(key.substr(5))
+		if not rdef.is_empty() and int(rdef.get("token_value", 0)) > 0:
+			return maxi(1, int(ceil(int(rdef["token_value"]) * 0.5)))
 	return int(SUGGESTED_LIST_PRICE.get(key, DEFAULT_LIST_PRICE))
 
 

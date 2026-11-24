@@ -34,6 +34,8 @@ var _refresh_timer:    Timer           = null
 
 ## Autoplant + tractor (mirror of personal garden).
 var _autoplant_btn:    Button          = null
+var _autoplant_rows_lbl: Label         = null
+var _autoplant_rows_dd:  OptionButton  = null
 var _tractor_btn:      Button          = null
 var _tractor_active:   bool            = false
 var _is_autoplanting:  bool            = false
@@ -164,6 +166,23 @@ func _build_ui() -> void:
 	tool_row.add_theme_constant_override("separation", 6)
 	tool_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(tool_row)
+
+	## Rows picker: plant fewer rows than unlocked (choice remembered).
+	_autoplant_rows_lbl = Label.new()
+	_autoplant_rows_lbl.text = "Rows:"
+	_autoplant_rows_lbl.add_theme_font_size_override("font_size", 11)
+	_autoplant_rows_lbl.visible = false
+	tool_row.add_child(_autoplant_rows_lbl)
+
+	_autoplant_rows_dd = OptionButton.new()
+	_autoplant_rows_dd.add_theme_font_size_override("font_size", 11)
+	_autoplant_rows_dd.custom_minimum_size = Vector2(56, 34)
+	_autoplant_rows_dd.visible = false
+	_autoplant_rows_dd.item_selected.connect(func(_i):
+		PlayerData.guild_garden_auto_plant_rows = _autoplant_rows_dd.get_selected_id()
+		PlayerData.save_data()
+		_refresh_tool_buttons())
+	tool_row.add_child(_autoplant_rows_dd)
 
 	_autoplant_btn = Button.new()
 	_autoplant_btn.text = "🤖 Auto-Plant"
@@ -647,14 +666,28 @@ func _set_status(text: String, color: Color = Color.WHITE) -> void:
 ## player has unlocked. Called on build, garden_updated, and seed selection.
 func _refresh_tool_buttons() -> void:
 	## Autoplant — requires "auto_plant" prestige > 0.
-	var ap_rows: int = PlayerData.get_auto_plant_rows()
+	var max_rows: int = PlayerData.get_auto_plant_rows()
+	var ap_rows: int = PlayerData.resolve_auto_plant_rows(PlayerData.guild_garden_auto_plant_rows)
+	if is_instance_valid(_autoplant_rows_lbl):
+		_autoplant_rows_lbl.visible = max_rows > 0
+	if is_instance_valid(_autoplant_rows_dd):
+		_autoplant_rows_dd.visible = max_rows > 0
+		if max_rows > 0:
+			if _autoplant_rows_dd.item_count != max_rows:
+				_autoplant_rows_dd.clear()
+				for n in range(1, max_rows + 1):
+					_autoplant_rows_dd.add_item(str(n), n)
+			for i in range(_autoplant_rows_dd.item_count):
+				if _autoplant_rows_dd.get_item_id(i) == ap_rows:
+					_autoplant_rows_dd.selected = i
+					break
 	if is_instance_valid(_autoplant_btn):
-		if ap_rows <= 0:
+		if max_rows <= 0:
 			_autoplant_btn.visible = false
 		else:
 			_autoplant_btn.visible = true
 			if _selected_seed < 0:
-				_autoplant_btn.text = "🤖 Auto-Plant (%d rows) — pick a seed" % ap_rows
+				_autoplant_btn.text = "🤖 Auto-Plant %d row(s) — pick a seed" % ap_rows
 				_autoplant_btn.disabled = true
 			else:
 				var def: Dictionary = GardenData.PLANT_DEFS[_selected_seed]
@@ -679,7 +712,7 @@ func _refresh_tool_buttons() -> void:
 func _on_autoplant_pressed() -> void:
 	if _is_autoplanting or _selected_seed < 0:
 		return
-	var ap_rows: int = PlayerData.get_auto_plant_rows()
+	var ap_rows: int = PlayerData.resolve_auto_plant_rows(PlayerData.guild_garden_auto_plant_rows)
 	if ap_rows <= 0:
 		return
 	if Garden.get_seed_count(_selected_seed) <= 0:

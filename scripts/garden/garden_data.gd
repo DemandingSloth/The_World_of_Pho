@@ -16,6 +16,11 @@ const ROW_COST_BASE := 150
 const COL_COST_BASE := 100
 const EXPANSION_SCALE := 1.25  ## Each purchase costs 25% more than the last
 
+## Second garden: bought once, same starting/max size as the first. Its rows and
+## columns start at 1B each and scale by EXPANSION_SCALE like the first garden.
+const SECOND_GARDEN_COST := 20_000_000_000
+const SECOND_GARDEN_EXPAND_BASE := 1_000_000_000
+
 ## Seed storage
 const BASE_SEED_STORAGE := 50
 const SEED_STORAGE_UPGRADE_SLOTS := 10
@@ -85,6 +90,17 @@ var grid: Array = []
 var seeds: Dictionary = {}
 
 var auto_select_next_seed: bool = false
+
+## ── Second garden ──
+## garden_rows / garden_cols / grid always hold the garden being viewed
+## (active_garden: 0 = first, 1 = second). The other garden is parked in the
+## _stash_* vars and swapped in by switch_garden(), so every existing plant /
+## harvest / tool path works on whichever garden is active. Seeds are shared.
+var second_garden_owned: bool = false
+var active_garden: int = 0
+var _stash_rows: int = MIN_ROWS
+var _stash_cols: int = MIN_COLS
+var _stash_grid: Array = []
 
 
 ## ── Lifecycle ──────────────────────────────────────────────────
@@ -300,12 +316,58 @@ func get_seed_shop_refresh_remaining() -> float:
 
 func get_row_cost() -> int:
 	var purchases_made := garden_rows - MIN_ROWS
-	return int(ROW_COST_BASE * pow(EXPANSION_SCALE, purchases_made))
+	var base: int = SECOND_GARDEN_EXPAND_BASE if active_garden == 1 else ROW_COST_BASE
+	return int(base * pow(EXPANSION_SCALE, purchases_made))
 
 
 func get_col_cost() -> int:
 	var purchases_made := garden_cols - MIN_COLS
-	return int(COL_COST_BASE * pow(EXPANSION_SCALE, purchases_made))
+	var base: int = SECOND_GARDEN_EXPAND_BASE if active_garden == 1 else COL_COST_BASE
+	return int(base * pow(EXPANSION_SCALE, purchases_made))
+
+
+## ── Second garden ──────────────────────────────────────────────
+
+func can_buy_second_garden() -> bool:
+	return not second_garden_owned and PlayerData.coins >= SECOND_GARDEN_COST
+
+
+func buy_second_garden() -> bool:
+	if second_garden_owned or PlayerData.coins < SECOND_GARDEN_COST:
+		return false
+	PlayerData.coins -= SECOND_GARDEN_COST
+	second_garden_owned = true
+	## Fresh, empty garden at the starting size (the stash holds garden 2 while
+	## garden 1 is active, which is the only time this can be bought).
+	if active_garden == 0:
+		_stash_rows = MIN_ROWS
+		_stash_cols = MIN_COLS
+		_stash_grid = _empty_grid(_stash_rows, _stash_cols)
+	PlayerData.save_data()
+	save_data()
+	garden_updated.emit()
+	return true
+
+
+## Make garden `idx` (0 or 1) the one being viewed / planted. Returns false if
+## it's already active or the second garden isn't owned.
+func switch_garden(idx: int) -> bool:
+	if idx == active_garden or idx < 0 or idx > 1:
+		return false
+	if idx == 1 and not second_garden_owned:
+		return false
+	var r := garden_rows
+	var c := garden_cols
+	var g := grid
+	garden_rows = _stash_rows
+	garden_cols = _stash_cols
+	grid = _stash_grid
+	_stash_rows = r
+	_stash_cols = c
+	_stash_grid = g
+	active_garden = idx
+	garden_updated.emit()
+	return true
 
 
 func can_buy_row() -> bool:
@@ -452,6 +514,28 @@ func is_harvestable(row: int, col: int) -> bool:
 	return get_growth_progress(row, col) >= 1.0
 
 
+## True if a saved cell (null or {plant_type, plant_time}) is ready to harvest.
+## Works on either garden's grid, not just the one being viewed.
+func is_cell_harvestable(cell) -> bool:
+	if not (cell is Dictionary) or not cell.has("plant_type"):
+		return false
+	var effective_time := get_effective_harvest_time(int(cell["plant_type"]))
+	if effective_time <= 0.0:
+		return false
+	return TrustedClock.now() - float(cell.get("plant_time", 0.0)) >= effective_time
+
+
+## Every owned garden as {index, rows, cols, grid}, regardless of which one is
+## being viewed. Garden 1 is index 0.
+func get_owned_gardens() -> Array:
+	var active := {"index": active_garden, "rows": garden_rows, "cols": garden_cols, "grid": grid}
+	var out: Array = [active]
+	if second_garden_owned:
+		out.append({"index": 1 - active_garden, "rows": _stash_rows, "cols": _stash_cols, "grid": _stash_grid})
+	out.sort_custom(func(a, b): return int(a["index"]) < int(b["index"]))
+	return out
+
+
 ## Advances every planted crop's growth by the given number of hours (used by
 ## the Workshop hourglass). Shifts each plant_time back so it's as if that much
 ## time passed toward harvest readiness.
@@ -464,6 +548,13 @@ func advance_time_hours(hours: float) -> void:
 			if cell is Dictionary and cell.has("plant_time"):
 				cell["plant_time"] = float(cell["plant_time"]) - seconds
 				changed = true
+	## The hourglass also speeds up the garden that isn't being viewed.
+	if second_garden_owned:
+		for row_data in _stash_grid:
+			for cell in row_data:
+				if cell is Dictionary and cell.has("plant_time"):
+					cell["plant_time"] = float(cell["plant_time"]) - seconds
+					changed = true
 
 	## Restock the seed shop for the skipped time. We compute cycles directly
 	## from (current elapsed + skipped seconds) instead of shifting the
@@ -719,21 +810,70 @@ func _expand_grid() -> void:
 
 ## ── Persistence ────────────────────────────────────────────────
 
+func _empty_grid(rows: int, cols: int) -> Array:
+	var g: Array = []
+	for r in range(rows):
+		var row_data: Array = []
+		for c in range(cols):
+			row_data.append(null)
+		g.append(row_data)
+	return g
+
+
+func _serialize_grid(g: Array, rows: int, cols: int) -> Array:
+	var out: Array = []
+	for r in range(rows):
+		var row_data: Array = []
+		for c in range(cols):
+			var cell = null
+			if r < g.size() and c < g[r].size():
+				cell = g[r][c]
+			row_data.append(cell)  ## null or dict
+		out.append(row_data)
+	return out
+
+
+## Builds a rows×cols grid from saved data, trimming or padding as needed.
+func _parse_grid(grid_data, rows: int, cols: int) -> Array:
+	var g: Array = []
+	if grid_data is Array:
+		for r in range(mini(grid_data.size(), rows)):
+			var row_data: Array = []
+			if grid_data[r] is Array:
+				for c in range(mini(grid_data[r].size(), cols)):
+					row_data.append(grid_data[r][c])
+			while row_data.size() < cols:
+				row_data.append(null)
+			g.append(row_data)
+	while g.size() < rows:
+		var row_data: Array = []
+		for c in range(cols):
+			row_data.append(null)
+		g.append(row_data)
+	return g
+
+
 func save_data() -> void:
 	var config := ConfigFile.new()
-	config.set_value("garden", "rows", garden_rows)
-	config.set_value("garden", "cols", garden_cols)
+	## Garden 1 always goes in [garden], garden 2 in [garden2], whichever is active.
+	var g1_rows: int = garden_rows if active_garden == 0 else _stash_rows
+	var g1_cols: int = garden_cols if active_garden == 0 else _stash_cols
+	var g1_grid: Array = grid if active_garden == 0 else _stash_grid
+	var g2_rows: int = _stash_rows if active_garden == 0 else garden_rows
+	var g2_cols: int = _stash_cols if active_garden == 0 else garden_cols
+	var g2_grid: Array = _stash_grid if active_garden == 0 else grid
+
+	config.set_value("garden", "rows", g1_rows)
+	config.set_value("garden", "cols", g1_cols)
 	config.set_value("garden", "seed_storage_upgrades", seed_storage_upgrades)
 	config.set_value("garden", "auto_select_next_seed", auto_select_next_seed)
+	config.set_value("garden", "grid", _serialize_grid(g1_grid, g1_rows, g1_cols))
 
-	## Serialize grid
-	var grid_data: Array = []
-	for r in range(garden_rows):
-		var row_data: Array = []
-		for c in range(garden_cols):
-			row_data.append(grid[r][c])  ## null or dict
-		grid_data.append(row_data)
-	config.set_value("garden", "grid", grid_data)
+	config.set_value("garden2", "owned", second_garden_owned)
+	if second_garden_owned:
+		config.set_value("garden2", "rows", g2_rows)
+		config.set_value("garden2", "cols", g2_cols)
+		config.set_value("garden2", "grid", _serialize_grid(g2_grid, g2_rows, g2_cols))
 
 	## Serialize seeds
 	var seed_data: Dictionary = {}
@@ -771,24 +911,14 @@ func load_data() -> void:
 	seed_storage_upgrades = config.get_value("garden", "seed_storage_upgrades", 0)
 	auto_select_next_seed = config.get_value("garden", "auto_select_next_seed", false)
 
-	var grid_data = config.get_value("garden", "grid", [])
-	grid.clear()
-	if grid_data is Array and grid_data.size() > 0:
-		for r in range(mini(grid_data.size(), garden_rows)):
-			var row_data: Array = []
-			if grid_data[r] is Array:
-				for c in range(mini(grid_data[r].size(), garden_cols)):
-					row_data.append(grid_data[r][c])
-			## Pad columns if needed
-			while row_data.size() < garden_cols:
-				row_data.append(null)
-			grid.append(row_data)
-	## Pad rows if needed
-	while grid.size() < garden_rows:
-		var row_data: Array = []
-		for c in range(garden_cols):
-			row_data.append(null)
-		grid.append(row_data)
+	grid = _parse_grid(config.get_value("garden", "grid", []), garden_rows, garden_cols)
+
+	## Second garden (parked in the stash; the game always opens on garden 1).
+	active_garden = 0
+	second_garden_owned = bool(config.get_value("garden2", "owned", false))
+	_stash_rows = clampi(int(config.get_value("garden2", "rows", MIN_ROWS)), MIN_ROWS, MAX_ROWS)
+	_stash_cols = clampi(int(config.get_value("garden2", "cols", MIN_COLS)), MIN_COLS, MAX_COLS)
+	_stash_grid = _parse_grid(config.get_value("garden2", "grid", []), _stash_rows, _stash_cols)
 
 	var seed_data = config.get_value("garden", "seeds", {})
 	seeds.clear()

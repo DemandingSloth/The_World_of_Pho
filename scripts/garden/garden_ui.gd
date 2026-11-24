@@ -13,9 +13,14 @@ var _tractor_btn: Button = null
 var _shovel_btn: Button = null
 var _orchard_btn: Button = null
 var _auto_plant_btn: Button = null
+var _auto_plant_row: HBoxContainer = null
+var _auto_plant_rows_dd: OptionButton = null
 ## True while a per-row auto-plant sweep is running (prevents re-entry).
 var _is_auto_planting: bool = false
 var _tool_status_label: Label = null
+var _garden1_btn: Button = null
+var _garden2_btn: Button = null
+var _buy_garden2_btn: Button = null
 
 signal coins_changed  ## Emitted when harvesting changes coins
 const REFRESH_INTERVAL := 2.0  ## Seconds between UI refresh (for growth animation)
@@ -81,6 +86,35 @@ func _build_ui() -> void:
 	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status_label.text = "Select a seed, then click a  tile to plant."
 	add_child(_status_label)
+
+	## Garden switcher: [Garden 1] [Garden 2] — or a buy button for Garden 2.
+	var switch_row := HBoxContainer.new()
+	switch_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	switch_row.add_theme_constant_override("separation", 6)
+	## (Added to the tool bar below, just left of the Orchard button.)
+
+	_garden1_btn = Button.new()
+	_garden1_btn.text = "Garden 1"
+	_garden1_btn.toggle_mode = true
+	_garden1_btn.add_theme_font_size_override("font_size", 11)
+	_garden1_btn.custom_minimum_size = Vector2(0, 40)
+	_garden1_btn.pressed.connect(_on_switch_garden.bind(0))
+	switch_row.add_child(_garden1_btn)
+
+	_garden2_btn = Button.new()
+	_garden2_btn.text = "Garden 2"
+	_garden2_btn.toggle_mode = true
+	_garden2_btn.add_theme_font_size_override("font_size", 11)
+	_garden2_btn.custom_minimum_size = Vector2(0, 40)
+	_garden2_btn.pressed.connect(_on_switch_garden.bind(1))
+	switch_row.add_child(_garden2_btn)
+
+	_buy_garden2_btn = Button.new()
+	_buy_garden2_btn.text = "🔒 Garden 2\n%s" % PlayerData.format_coins(GardenData.SECOND_GARDEN_COST)
+	_buy_garden2_btn.add_theme_font_size_override("font_size", 10)
+	_buy_garden2_btn.custom_minimum_size = Vector2(0, 40)
+	_buy_garden2_btn.pressed.connect(_on_buy_garden2_pressed)
+	switch_row.add_child(_buy_garden2_btn)
 
 	## Seed inventory bar
 	var seed_section := VBoxContainer.new()
@@ -180,6 +214,7 @@ func _build_ui() -> void:
 	_orchard_btn.add_theme_font_size_override("font_size", 11)
 	_orchard_btn.tooltip_text = "Visit your tree Orchard"
 	_orchard_btn.pressed.connect(_on_orchard_pressed)
+	tool_bar.add_child(switch_row)
 	tool_bar.add_child(_orchard_btn)
 
 	add_child(tool_bar)
@@ -192,14 +227,34 @@ func _build_ui() -> void:
 	_tool_status_label.modulate = Color(0.9, 0.9, 0.5)
 	add_child(_tool_status_label)
 
-	## Auto-Plant button (visible only when prestige level > 0)
+	## Auto-Plant row: [rows picker] [Auto-Plant button]. Visible only when the
+	## Green Thumb prestige is owned. The picker lets the player plant fewer rows
+	## than they've unlocked (1..unlocked); the choice is remembered.
+	_auto_plant_row = HBoxContainer.new()
+	_auto_plant_row.add_theme_constant_override("separation", 6)
+	_auto_plant_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	add_child(_auto_plant_row)
+
+	var rows_lbl := Label.new()
+	rows_lbl.text = "Rows:"
+	rows_lbl.add_theme_font_size_override("font_size", 12)
+	_auto_plant_row.add_child(rows_lbl)
+
+	_auto_plant_rows_dd = OptionButton.new()
+	_auto_plant_rows_dd.add_theme_font_size_override("font_size", 12)
+	_auto_plant_rows_dd.custom_minimum_size = Vector2(60, 40)
+	_auto_plant_rows_dd.item_selected.connect(func(_i):
+		PlayerData.garden_auto_plant_rows = _auto_plant_rows_dd.get_selected_id()
+		PlayerData.save_data()
+		_refresh_auto_plant_btn())
+	_auto_plant_row.add_child(_auto_plant_rows_dd)
+
 	_auto_plant_btn = Button.new()
 	_auto_plant_btn.name = "AutoPlantBtn"
 	_auto_plant_btn.add_theme_font_size_override("font_size", 12)
 	_auto_plant_btn.custom_minimum_size = Vector2(220, 40)
-	_auto_plant_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_auto_plant_btn.pressed.connect(_on_auto_plant_pressed)
-	add_child(_auto_plant_btn)
+	_auto_plant_row.add_child(_auto_plant_btn)
 	_refresh_auto_plant_btn()
 
 	## Only the plot (and expand buttons) scroll — HUD stays on the viewport
@@ -532,11 +587,68 @@ func _update_expand_buttons() -> void:
 	if Garden.garden_rows >= GardenData.MAX_ROWS:
 		_expand_row_btn.text = "Rows Maxed"
 	else:
-		_expand_row_btn.text = "+Row (%dc)" % Garden.get_row_cost()
+		_expand_row_btn.text = "+Row (%s)" % PlayerData.format_coins(Garden.get_row_cost())
 	if Garden.garden_cols >= GardenData.MAX_COLS:
 		_expand_col_btn.text = "Cols Maxed"
 	else:
-		_expand_col_btn.text = "+Column (%dc)" % Garden.get_col_cost()
+		_expand_col_btn.text = "+Column (%s)" % PlayerData.format_coins(Garden.get_col_cost())
+	_update_garden_switch()
+
+
+## Shows Garden 1 / Garden 2 tabs once the second garden is owned, otherwise a
+## buy button. Highlights the garden being viewed.
+func _update_garden_switch() -> void:
+	if _garden1_btn == null:
+		return
+	var owned: bool = Garden.second_garden_owned
+	_garden1_btn.visible = owned
+	_garden2_btn.visible = owned
+	_buy_garden2_btn.visible = not owned
+	_garden1_btn.set_pressed_no_signal(Garden.active_garden == 0)
+	_garden2_btn.set_pressed_no_signal(Garden.active_garden == 1)
+	_buy_garden2_btn.disabled = not Garden.can_buy_second_garden()
+
+
+func _on_switch_garden(idx: int) -> void:
+	if _is_auto_planting:
+		_update_garden_switch()
+		_status_label.text = "Wait for Auto-Plant to finish."
+		return
+	if Garden.switch_garden(idx):
+		_hide_timer_popup_if_any()
+		_scroll_container.scroll_vertical = 0
+		_scroll_container.scroll_horizontal = 0
+		_rebuild_all()
+		_status_label.text = "Now viewing Garden %d." % (idx + 1)
+	_update_garden_switch()
+
+
+func _hide_timer_popup_if_any() -> void:
+	if _timer_popup != null and is_instance_valid(_timer_popup):
+		_timer_popup.visible = false
+
+
+func _on_buy_garden2_pressed() -> void:
+	if not Garden.can_buy_second_garden():
+		_status_label.text = "You need %s to buy a second garden." % PlayerData.format_coins(GardenData.SECOND_GARDEN_COST)
+		return
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Buy Garden 2"
+	dlg.dialog_text = "Buy a second garden for %s?\nIt starts at %d×%d. Rows and columns start at %s each." % [
+		PlayerData.format_coins(GardenData.SECOND_GARDEN_COST),
+		GardenData.MIN_ROWS, GardenData.MIN_COLS,
+		PlayerData.format_coins(GardenData.SECOND_GARDEN_EXPAND_BASE)]
+	dlg.dialog_autowrap = true
+	dlg.min_size = Vector2i(300, 0)
+	dlg.confirmed.connect(func():
+		if Garden.buy_second_garden():
+			coins_changed.emit()
+			_status_label.text = "Garden 2 bought! Tap 🌱 Garden 2 to plant there."
+		_update_garden_switch()
+		dlg.queue_free())
+	dlg.canceled.connect(dlg.queue_free)
+	add_child(dlg)
+	dlg.popup_centered()
 
 
 ## ── Input Handling ─────────────────────────────────────────────
@@ -546,11 +658,17 @@ func _update_expand_buttons() -> void:
 func _refresh_auto_plant_btn() -> void:
 	if _auto_plant_btn == null:
 		return
-	var rows: int = PlayerData.get_auto_plant_rows()
-	if rows <= 0:
+	var max_rows: int = PlayerData.get_auto_plant_rows()
+	if max_rows <= 0:
+		if _auto_plant_row != null:
+			_auto_plant_row.visible = false
 		_auto_plant_btn.visible = false
 		return
+	if _auto_plant_row != null:
+		_auto_plant_row.visible = true
 	_auto_plant_btn.visible = true
+	_rebuild_rows_dropdown(max_rows)
+	var rows: int = _chosen_auto_plant_rows()
 	if _selected_seed < 0:
 		_auto_plant_btn.text = "🤖 Auto-Plant %d row(s) — select a seed first" % rows
 		_auto_plant_btn.disabled = true
@@ -562,11 +680,37 @@ func _refresh_auto_plant_btn() -> void:
 		_auto_plant_btn.disabled = seed_count <= 0
 
 
+## Rows the player chose to auto-plant: their saved pick (1..unlocked), or every
+## unlocked row if they haven't picked / the pick is above what's unlocked.
+func _chosen_auto_plant_rows() -> int:
+	var max_rows: int = PlayerData.get_auto_plant_rows()
+	var pick: int = PlayerData.garden_auto_plant_rows
+	if pick <= 0 or pick > max_rows:
+		return max_rows
+	return pick
+
+
+## Fills the rows picker with 1..max_rows (only when that range changes) and
+## selects the current choice.
+func _rebuild_rows_dropdown(max_rows: int) -> void:
+	if _auto_plant_rows_dd == null:
+		return
+	if _auto_plant_rows_dd.item_count != max_rows:
+		_auto_plant_rows_dd.clear()
+		for n in range(1, max_rows + 1):
+			_auto_plant_rows_dd.add_item(str(n), n)
+	var want := _chosen_auto_plant_rows()
+	for i in range(_auto_plant_rows_dd.item_count):
+		if _auto_plant_rows_dd.get_item_id(i) == want:
+			_auto_plant_rows_dd.selected = i
+			break
+
+
 func _on_auto_plant_pressed() -> void:
 	if _selected_seed < 0:
 		_status_label.text = "Select a seed first."
 		return
-	var rows_to_fill: int = PlayerData.get_auto_plant_rows()
+	var rows_to_fill: int = _chosen_auto_plant_rows()
 	if rows_to_fill <= 0:
 		return
 

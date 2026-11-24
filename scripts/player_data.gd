@@ -314,7 +314,7 @@ const ITEM_DEFS: Array[Dictionary] = [
 		## sturdier = ENDURANCE.
 		"id": "copper_horseshoe",
 		"name": "Copper Horseshoe",
-		"description": "A light copper shoe. Equipped to a horse, it boosts its race Speed (stronger the more you own).",
+		"description": "A light copper shoe. Equipped to a horse, it boosts its race Speed and raises the most Sprint training can earn (stronger the more you own).",
 		"sell_price": 300_000,
 		"sprite": "res://Assets/copper_ingot.png",
 		"stackable": true,
@@ -328,7 +328,7 @@ const ITEM_DEFS: Array[Dictionary] = [
 	{
 		"id": "iron_horseshoe",
 		"name": "Iron Horseshoe",
-		"description": "A sturdy iron shoe. Equipped to a horse, it boosts its race Endurance (stronger the more you own).",
+		"description": "A sturdy iron shoe. Equipped to a horse, it boosts its race Endurance and raises the most Hurdle training can earn (stronger the more you own).",
 		"sell_price": 300_000,
 		"sprite": "res://Assets/iron_bar.png",
 		"stackable": true,
@@ -2552,6 +2552,8 @@ func craft_sticks(batches: int = 1) -> int:
 ## Add new codes here to extend the system.
 var _CHEAT_CODES: Dictionary = {
 	"SlothLovesFreeStuff": func(): add_diamond_ring(),
+	## One-time fix for the old 1–10%/hr Steady Learner runaway: removes 10T XP.
+	"SlothXpRollback": func(): _rollback_xp(10_000_000_000_000),
 	## ── Jewelry grants: one of each produced ring/necklace ─────────────
 	## For testing the equip bonuses + Guild Fronts without crafting them.
 	"SlothsGoldRing":      func(): _grant_jewelry(["gold_ring"]),
@@ -3432,23 +3434,48 @@ const PRESTIGE_UPGRADE_IDS: Array[String] = [
 
 ## ── New prestige paths: passive XP + horse training cap + stable size ──────
 
-## Passive XP per hour by level (index 0 = level 1). 10/hr at L1 up to 10,000/hr
-## at L10. Granted as raw XP (not multiplied by Scholar), offline included.
-const PASSIVE_XP_PER_HOUR: Array[int] = [10, 30, 75, 150, 300, 600, 1200, 2500, 5000, 10000]
+## Passive XP: percent of the XP the player's NEXT LEVEL costs, earned per hour, by level
+## (index 0 = level 1). 0.1% at L1 up to 1% at L10. Granted as raw XP (not
+## multiplied by Scholar), offline included.
+const PASSIVE_XP_PERCENT: Array[float] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+## Player level stops at MAX_LEVEL; XP keeps accumulating past it (it can still
+## be spent). XP_HARD_CAP keeps the XP total far below the int64 limit so it
+## can never wrap negative (which previously reset players to level 1).
+const MAX_LEVEL := 100
+const XP_HARD_CAP: int = 1_000_000_000_000_000_000
 
 ## Max stat points ONE training session can earn, by level (base 10 at L0).
 ## L1 = 11 ... L10 = 50. MUST match _horse_prestige_training_bonus (migration 107).
 const HORSE_TRAINING_CAP_BY_LEVEL: Array[int] = [11, 13, 16, 19, 23, 27, 32, 38, 44, 50]
 
+## Passive XP credited after an absence of 15+ min, not yet shown to the
+## player. main.gd shows it in the offline report popup, then clears it.
+var offline_passive_xp: int = 0
+
 ## Unix time passive XP was last credited up to (persisted).
 var passive_xp_last_ts: float = 0.0
 
-## XP per hour from the passive XP path (0 when not owned).
-func get_passive_xp_per_hour() -> int:
+## Percent of current XP earned per hour (0 when not owned).
+func get_passive_xp_percent() -> float:
 	var lvl := get_prestige_level("passive_xp")
 	if lvl <= 0:
-		return 0
-	return PASSIVE_XP_PER_HOUR[clampi(lvl, 1, PASSIVE_XP_PER_HOUR.size()) - 1]
+		return 0.0
+	return PASSIVE_XP_PERCENT[clampi(lvl, 1, PASSIVE_XP_PERCENT.size()) - 1]
+
+## XP per hour from the passive XP path right now (0 when not owned).
+func get_passive_xp_per_hour() -> int:
+	return int(floor(_passive_xp_rate()))
+
+
+## XP per hour = percent of the XP your next level costs (the level step, not
+## your XP total), so it doesn't compound. At MAX_LEVEL it uses the last step.
+func _passive_xp_rate() -> float:
+	var pct := get_passive_xp_percent()
+	if pct <= 0.0:
+		return 0.0
+	var step: int = xp_for_level(mini(level, MAX_LEVEL))
+	return float(step) * pct / 100.0
 
 ## Per-session training cap from prestige alone (10 when not owned).
 func get_prestige_training_cap() -> int:
@@ -3466,19 +3493,31 @@ func get_prestige_stable_bonus() -> int:
 ## a 60s timer + load + after a prestige checkout.
 func accrue_passive_xp() -> void:
 	var now := TrustedClock.now()
-	var rate := get_passive_xp_per_hour()
-	if rate <= 0 or passive_xp_last_ts <= 0.0 or passive_xp_last_ts > now:
-		## Not owned yet (or clock went backwards): start the clock from now.
+	var rate: float = _passive_xp_rate()
+	if rate <= 0.0 or passive_xp_last_ts <= 0.0 or passive_xp_last_ts > now:
+		## Not owned yet / no XP (or clock went backwards): start the clock from now.
 		passive_xp_last_ts = now
 		return
-	var seconds_per_xp := 3600.0 / float(rate)
-	var earned := int(floor((now - passive_xp_last_ts) / seconds_per_xp))
+	var seconds_per_xp: float = 3600.0 / rate
+	var elapsed: float = now - passive_xp_last_ts
+	## Compute in float and clamp before converting, so a huge rate or a long
+	## absence can't overflow the int.
+	var earned_f: float = floor(elapsed / seconds_per_xp)
+	var room: int = maxi(0, XP_HARD_CAP - xp)
+	var earned: int = room if earned_f >= float(room) else int(earned_f)
 	if earned <= 0:
+		## At the XP cap (or nothing earned yet): keep the clock moving so
+		## time doesn't pile up.
+		if room <= 0:
+			passive_xp_last_ts = now
 		return
+	## Away for 15+ minutes: remember the gain so main.gd can show a report.
+	if elapsed >= 900.0:
+		offline_passive_xp += earned
 	passive_xp_last_ts += earned * seconds_per_xp
 	var old_level := level
 	xp += earned
-	lifetime_xp += earned
+	lifetime_xp = mini(lifetime_xp + earned, XP_HARD_CAP)
 	recalculate_level()
 	_check_level_up(old_level)
 	save_data()
@@ -3486,19 +3525,26 @@ func accrue_passive_xp() -> void:
 
 ## Pushes the horse prestige levels to the server (training cap + stable size
 ## are enforced server-side). Safe to call often; no-op when offline.
-func sync_horse_prestige() -> void:
+func sync_horse_prestige(refresh_stable: bool = true) -> void:
 	if get_node_or_null("/root/MarketplaceAccount") == null \
 			or not MarketplaceAccount.has_account() \
 			or get_node_or_null("/root/SupabaseClient") == null \
 			or not SupabaseClient.is_configured():
 		return
-	await SupabaseClient.request_json("POST", "/rest/v1/rpc/set_horse_prestige", {
+	var body := {
 		"p_device_hash":    MarketplaceAccount._device_hash(),
 		"p_training_level": get_prestige_level("horse_training_cap"),
 		"p_stable_level":   get_prestige_level("horse_stable_size"),
-	})
+	}
+	## Horseshoe bonus levels (count-based) also raise the training cap of the
+	## shoe's stat (migration 111) — they work like the Master Trainer prestige.
+	if get_node_or_null("/root/HorseRacing") != null:
+		body["p_copper_level"] = HorseRacing.horseshoe_level("copper")
+		body["p_iron_level"]   = HorseRacing.horseshoe_level("iron")
+	await SupabaseClient.request_json("POST", "/rest/v1/rpc/set_horse_prestige", body)
 	## Refresh the stable so the new capacity shows immediately.
-	if get_node_or_null("/root/HorseRacing") != null and HorseRacing.has_method("refresh"):
+	if refresh_stable and get_node_or_null("/root/HorseRacing") != null \
+			and HorseRacing.has_method("refresh"):
 		HorseRacing.refresh()
 
 ## Returns the XP cost to reach the next level for a given upgrade.
@@ -3567,6 +3613,20 @@ func get_misc_profit_multiplier() -> float:
 func get_auto_plant_rows() -> int:
 	return get_prestige_level("auto_plant")
 
+## The player's chosen number of garden rows to auto-plant (0 = all unlocked).
+## Picked in the garden's Auto-Plant "Rows:" dropdown; saved.
+var garden_auto_plant_rows: int = 0
+## Same for the orchard and the guild garden (each remembered separately).
+var orchard_auto_plant_rows: int = 0
+var guild_garden_auto_plant_rows: int = 0
+
+## Clamps a saved rows pick to 1..unlocked; 0 or above-unlocked means all.
+func resolve_auto_plant_rows(pick: int) -> int:
+	var max_rows: int = get_auto_plant_rows()
+	if pick <= 0 or pick > max_rows:
+		return max_rows
+	return pick
+
 ## XP gain multiplier from Scholar prestige (+25% at L1 up to +1000% at L10).
 func get_xp_multiplier() -> float:
 	## Scholar prestige × equipped violet_stone "xp_gain" jewelry (multiplicative).
@@ -3614,18 +3674,34 @@ func get_total_xp() -> int:
 ## Triggered after prestige spending and upon game load.
 ## Does NOT modify lifetime_xp.
 func recalculate_level() -> void:
+	if xp > XP_HARD_CAP:
+		xp = XP_HARD_CAP
 	level = 1
-	var safety_counter: int = 0
-	while safety_counter < 10000:
-		var needed_for_next := cumulative_xp_for_level(level + 1)
+	## Walk up one level at a time, adding each level's cost (O(n), stops at
+	## MAX_LEVEL — XP beyond that is kept but doesn't raise the level).
+	var needed_for_next: int = 0
+	while level < MAX_LEVEL:
+		needed_for_next += xp_for_level(level)
 		if xp >= needed_for_next:
 			level += 1
-			safety_counter += 1
 		else:
 			break
 	## Track the all-time peak so the home screen can show "current/peak".
+	peak_level = mini(peak_level, MAX_LEVEL)
 	if level > peak_level:
 		peak_level = level
+
+
+## Removes `amount` XP (current and lifetime, floored at 0) and resets the peak
+## level to the recalculated level. Used by the SlothXpRollback fix code.
+func _rollback_xp(amount: int) -> void:
+	xp = maxi(0, xp - amount)
+	lifetime_xp = maxi(0, lifetime_xp - amount)
+	offline_passive_xp = 0
+	recalculate_level()
+	peak_level = level
+	save_data()
+	data_changed.emit()
 
 
 func recalculate_after_spend() -> void:
@@ -3703,6 +3779,9 @@ func save_data() -> void:
 	config.set_value("player", "guild_reward_xp_watermark", guild_reward_xp_watermark)
 	config.set_value("prestige", "levels", prestige_levels)
 	config.set_value("prestige", "passive_xp_last_ts", passive_xp_last_ts)
+	config.set_value("prestige", "garden_auto_plant_rows", garden_auto_plant_rows)
+	config.set_value("prestige", "orchard_auto_plant_rows", orchard_auto_plant_rows)
+	config.set_value("prestige", "guild_garden_auto_plant_rows", guild_garden_auto_plant_rows)
 	config.set_value("prestige", "reprice_migrated", prestige_reprice_migrated)
 	config.set_value("prestige", "reprice_100b_migrated", prestige_100b_migrated)
 	config.set_value("prestige", "reprice_100b_v2_migrated", prestige_100b_v2_migrated)
@@ -3896,6 +3975,9 @@ func load_data() -> void:
 	if loaded_prestige is Dictionary:
 		prestige_levels = loaded_prestige
 	passive_xp_last_ts = float(config.get_value("prestige", "passive_xp_last_ts", 0.0))
+	garden_auto_plant_rows = int(config.get_value("prestige", "garden_auto_plant_rows", 0))
+	orchard_auto_plant_rows = int(config.get_value("prestige", "orchard_auto_plant_rows", 0))
+	guild_garden_auto_plant_rows = int(config.get_value("prestige", "guild_garden_auto_plant_rows", 0))
 
 	## One-time repricing migration: reconcile levels bought at old prices with
 	## the retuned (pricier) curves, refunding any excess to spendable xp.
@@ -5068,10 +5150,10 @@ func award_win(enemy_count: int) -> int:
 func award_xp(amount: int) -> void:
 	if amount <= 0:
 		return
-	var boosted := int(amount * get_xp_multiplier())
+	var boosted := int(minf(float(amount) * get_xp_multiplier(), float(XP_HARD_CAP)))
 	var old_level := level
-	xp += boosted
-	lifetime_xp += boosted
+	xp = mini(xp + boosted, XP_HARD_CAP)
+	lifetime_xp = mini(lifetime_xp + boosted, XP_HARD_CAP)
 	recalculate_level()
 	_check_level_up(old_level)
 	save_data()
@@ -5099,9 +5181,9 @@ func _check_level_up(old_level: int) -> void:
 func add_xp_batch(amount: int) -> void:
 	if amount <= 0:
 		return
-	var boosted := int(amount * get_xp_multiplier())
-	xp += boosted
-	lifetime_xp += boosted
+	var boosted := int(minf(float(amount) * get_xp_multiplier(), float(XP_HARD_CAP)))
+	xp = mini(xp + boosted, XP_HARD_CAP)
+	lifetime_xp = mini(lifetime_xp + boosted, XP_HARD_CAP)
 
 
 ## Runs the level-up check once after a batch of XP has been awarded.
@@ -5260,7 +5342,46 @@ func _generate_level_rewards_from_budget(budget: int, max_pieces: int = 999, che
 	if chest_level == 9 and randf() < 0.5:
 		rewards.append({"type": "material", "item_id": "wonderstone", "quantity": randi_range(1, 20)})
 
-	return rewards
+	return _apply_chest_multiplier(rewards)
+
+
+## Chest reward multiplier: (level + peak_level) / 2, never below 1.
+func get_chest_reward_multiplier() -> float:
+	return maxf(1.0, (float(level) + float(maxi(peak_level, level))) / 2.0)
+
+
+## Rounds a scaled amount; the fractional part is resolved randomly so small
+## quantities still average out to the exact multiplier.
+func _scale_amount(amount: int, mult: float) -> int:
+	var scaled: float = float(amount) * mult
+	var whole: int = int(floor(scaled))
+	if randf() < scaled - float(whole):
+		whole += 1
+	return whole
+
+
+## Scales every chest reward by get_chest_reward_multiplier().
+## Coins/seeds/prospectors/WonderStones have their amounts scaled; tiles and
+## gems (one entry per item) are repeated.
+func _apply_chest_multiplier(rewards: Array) -> Array:
+	var mult: float = get_chest_reward_multiplier()
+	if mult <= 1.0:
+		return rewards
+	var out: Array = []
+	for r in rewards:
+		if r is Dictionary and str(r.get("type", "")) == "coins":
+			r["amount"] = int(round(float(r["amount"]) * mult))
+			out.append(r)
+		elif r is Dictionary and (r.has("seed_type") or str(r.get("type", "")) in ["prospector", "material", "resource", "sapling"]):
+			r["quantity"] = _scale_amount(int(r.get("quantity", 1)), mult)
+			if int(r["quantity"]) > 0:
+				out.append(r)
+		else:
+			## Tile (enum int) or gem entry: repeat it.
+			var copies: int = _scale_amount(1, mult)
+			for i in copies:
+				out.append(r.duplicate() if r is Dictionary else r)
+	return out
 
 
 ## Legacy budget-based generator, used only for non-chest level-up rewards

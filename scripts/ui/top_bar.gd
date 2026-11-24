@@ -114,7 +114,13 @@ func refresh() -> void:
 	if xp_bar:
 		var current_lvl_start: int = PlayerData.cumulative_xp_for_level(PlayerData.level)
 		var next_lvl_start: int = PlayerData.cumulative_xp_for_level(PlayerData.level + 1)
-		xp_bar.min_value = current_lvl_start
-		xp_bar.max_value = next_lvl_start
-		xp_bar.value = PlayerData.xp
+		if PlayerData.level >= PlayerData.MAX_LEVEL:
+			## Level capped: show a full bar.
+			xp_bar.min_value = 0
+			xp_bar.max_value = 1
+			xp_bar.value = 1
+		else:
+			xp_bar.min_value = current_lvl_start
+			xp_bar.max_value = next_lvl_start
+			xp_bar.value = PlayerData.xp
 	_update_mines_button_state()

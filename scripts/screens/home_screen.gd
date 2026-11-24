@@ -802,6 +802,13 @@ func _update_xp_bar() -> void:
 	var bar: ProgressBar = xp_bar_node.get_node("XPProgress")
 	var current_lvl_start: int = PlayerData.cumulative_xp_for_level(PlayerData.level)
 	var next_lvl_start: int = PlayerData.cumulative_xp_for_level(PlayerData.level + 1)
+	if PlayerData.level >= PlayerData.MAX_LEVEL:
+		## Level capped: XP still accumulates (and can be spent); show a full bar.
+		xp_label.text = "   XP: %s (MAX LEVEL)" % PlayerData.format_number(PlayerData.xp)
+		bar.min_value = 0
+		bar.max_value = 1
+		bar.value = 1
+		return
 	xp_label.text = "   XP: %s / %s" % [PlayerData.format_number(PlayerData.xp), PlayerData.format_number(next_lvl_start)]
 	bar.min_value = current_lvl_start
 	bar.max_value = next_lvl_start

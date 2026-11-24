@@ -27,6 +27,8 @@ var _sapling_bar: HBoxContainer = null
 var _auto_next_sapling_cb: CheckBox = null
 var _tool_status_label: Label = null
 var _auto_plant_btn: Button = null
+var _auto_plant_row: HBoxContainer = null
+var _auto_plant_rows_dd: OptionButton = null
 var _shovel_btn: Button = null
 var _harvest_all_btn: Button = null
 ## True while a per-row "Harvest All" sweep is running (prevents re-entry and
@@ -150,14 +152,34 @@ func _build_ui() -> void:
 	_tool_status_label.modulate = Color(0.9, 0.9, 0.5)
 	add_child(_tool_status_label)
 
-	## Auto-Plant button (visible only when prestige level > 0)
+	## Auto-Plant row: [rows picker] [Auto-Plant button] (visible only when
+	## prestige level > 0). The picker lets the player plant fewer rows than
+	## they've unlocked; the choice is remembered.
+	_auto_plant_row = HBoxContainer.new()
+	_auto_plant_row.add_theme_constant_override("separation", 6)
+	_auto_plant_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	add_child(_auto_plant_row)
+
+	var rows_lbl := Label.new()
+	rows_lbl.text = "Rows:"
+	rows_lbl.add_theme_font_size_override("font_size", 12)
+	_auto_plant_row.add_child(rows_lbl)
+
+	_auto_plant_rows_dd = OptionButton.new()
+	_auto_plant_rows_dd.add_theme_font_size_override("font_size", 12)
+	_auto_plant_rows_dd.custom_minimum_size = Vector2(60, 40)
+	_auto_plant_rows_dd.item_selected.connect(func(_i):
+		PlayerData.orchard_auto_plant_rows = _auto_plant_rows_dd.get_selected_id()
+		PlayerData.save_data()
+		_refresh_auto_plant_btn())
+	_auto_plant_row.add_child(_auto_plant_rows_dd)
+
 	_auto_plant_btn = Button.new()
 	_auto_plant_btn.name = "AutoPlantBtn"
 	_auto_plant_btn.add_theme_font_size_override("font_size", 12)
 	_auto_plant_btn.custom_minimum_size = Vector2(220, 40)
-	_auto_plant_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_auto_plant_btn.pressed.connect(_on_auto_plant_pressed)
-	add_child(_auto_plant_btn)
+	_auto_plant_row.add_child(_auto_plant_btn)
 	_refresh_auto_plant_btn()
 
 	## Scrollable orchard body
@@ -849,11 +871,17 @@ func _update_expand_buttons() -> void:
 func _refresh_auto_plant_btn() -> void:
 	if _auto_plant_btn == null:
 		return
-	var rows: int = PlayerData.get_auto_plant_rows()
-	if rows <= 0:
+	var max_rows: int = PlayerData.get_auto_plant_rows()
+	if max_rows <= 0:
+		if _auto_plant_row != null:
+			_auto_plant_row.visible = false
 		_auto_plant_btn.visible = false
 		return
+	if _auto_plant_row != null:
+		_auto_plant_row.visible = true
 	_auto_plant_btn.visible = true
+	_rebuild_rows_dropdown(max_rows)
+	var rows: int = PlayerData.resolve_auto_plant_rows(PlayerData.orchard_auto_plant_rows)
 	if _selected_sapling < 0:
 		_auto_plant_btn.text = "🤖 Auto-Plant %d row(s) — select a sapling first" % rows
 		_auto_plant_btn.disabled = true
@@ -865,11 +893,27 @@ func _refresh_auto_plant_btn() -> void:
 		_auto_plant_btn.disabled = sapling_count <= 0
 
 
+## Fills the rows picker with 1..max_rows (only when that range changes) and
+## selects the current choice.
+func _rebuild_rows_dropdown(max_rows: int) -> void:
+	if _auto_plant_rows_dd == null:
+		return
+	if _auto_plant_rows_dd.item_count != max_rows:
+		_auto_plant_rows_dd.clear()
+		for n in range(1, max_rows + 1):
+			_auto_plant_rows_dd.add_item(str(n), n)
+	var want: int = PlayerData.resolve_auto_plant_rows(PlayerData.orchard_auto_plant_rows)
+	for i in range(_auto_plant_rows_dd.item_count):
+		if _auto_plant_rows_dd.get_item_id(i) == want:
+			_auto_plant_rows_dd.selected = i
+			break
+
+
 func _on_auto_plant_pressed() -> void:
 	if _selected_sapling < 0:
 		_status_label.text = "Select a sapling first."
 		return
-	var rows_to_fill: int = PlayerData.get_auto_plant_rows()
+	var rows_to_fill: int = PlayerData.resolve_auto_plant_rows(PlayerData.orchard_auto_plant_rows)
 	if rows_to_fill <= 0:
 		return
 
