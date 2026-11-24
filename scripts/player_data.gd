@@ -3434,10 +3434,10 @@ const PRESTIGE_UPGRADE_IDS: Array[String] = [
 
 ## ── New prestige paths: passive XP + horse training cap + stable size ──────
 
-## Passive XP: percent of the XP the player's NEXT LEVEL costs, earned per hour, by level
-## (index 0 = level 1). 0.1% at L1 up to 1% at L10. Granted as raw XP (not
-## multiplied by Scholar), offline included.
-const PASSIVE_XP_PERCENT: Array[float] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+## Passive XP (Steady Learner): flat XP earned per hour, by prestige level
+## (index 0 = level 1). 1/hr at L1 up to 10,000/hr at L10. Granted as raw XP
+## (not multiplied by Scholar), offline included.
+const PASSIVE_XP_PER_HOUR: Array[int] = [1, 3, 8, 22, 60, 170, 460, 1300, 3600, 10000]
 
 ## Player level stops at MAX_LEVEL; XP keeps accumulating past it (it can still
 ## be spent). XP_HARD_CAP keeps the XP total far below the int64 limit so it
@@ -3456,26 +3456,17 @@ var offline_passive_xp: int = 0
 ## Unix time passive XP was last credited up to (persisted).
 var passive_xp_last_ts: float = 0.0
 
-## Percent of current XP earned per hour (0 when not owned).
-func get_passive_xp_percent() -> float:
-	var lvl := get_prestige_level("passive_xp")
-	if lvl <= 0:
-		return 0.0
-	return PASSIVE_XP_PERCENT[clampi(lvl, 1, PASSIVE_XP_PERCENT.size()) - 1]
-
 ## XP per hour from the passive XP path right now (0 when not owned).
 func get_passive_xp_per_hour() -> int:
-	return int(floor(_passive_xp_rate()))
+	var lvl := get_prestige_level("passive_xp")
+	if lvl <= 0:
+		return 0
+	return PASSIVE_XP_PER_HOUR[clampi(lvl, 1, PASSIVE_XP_PER_HOUR.size()) - 1]
 
 
-## XP per hour = percent of the XP your next level costs (the level step, not
-## your XP total), so it doesn't compound. At MAX_LEVEL it uses the last step.
+## Flat XP per hour (independent of player level or XP, so it never compounds).
 func _passive_xp_rate() -> float:
-	var pct := get_passive_xp_percent()
-	if pct <= 0.0:
-		return 0.0
-	var step: int = xp_for_level(mini(level, MAX_LEVEL))
-	return float(step) * pct / 100.0
+	return float(get_passive_xp_per_hour())
 
 ## Per-session training cap from prestige alone (10 when not owned).
 func get_prestige_training_cap() -> int:
