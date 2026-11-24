@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 5
+display_name = "Clergy"
+short_label = "Cl"
+base_points = 3
+sprite_index = 6
+effect_type = 5
+effect_direction = 0
+effect_value = 1
+guard_types = []
+terrain_bonuses = {0: 1}
+description = "3 points. +1 to each allied piece on a diagonal. +1 base in Indoors terrain."
+tutorial_tip = "Place centrally to buff up to 4 allies at once. Protect it — if negated it buffs nothing."

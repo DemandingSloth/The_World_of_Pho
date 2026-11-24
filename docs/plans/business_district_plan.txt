@@ -1,0 +1,136 @@
+business district. 
+
+Player can have 6/13 businesses active at any one time. They can only Add to active stores pools. must wait 72 hours after switching a store to switch it again. 
+
+Active stores provide bonuses for threshholds met. So a player deposits items that the shop accepts. it increases the shops inventory. Starting at 50k deposits (this is intended for later game when your overflowing with items.) 
+Deposit Levels
+1 - 50,000
+2 - 150,000
+3 - 300,000
+4 - 650,000
+5 - 1,400,000
+6 - 3,000,000
+7 - 6,500,000
+8 - 14,000,000
+9 - 30,000,000
+10 - 65,000,000
+11 - 140,000,000
+12 - 300,000,000
+13 - 550,000,000
+14 - 750,000,000
+15 - 1,000,000,000
+
+At level 15 that bonus becomes permanent and no longer counts towards your 6/13 active bonuses. so if you have two shops maxed, you'll be able to have up to 8 bonuses active at one time. 
+
+format for below: Name of shop - Bonus Applied 
+                    -Accepted Items
+
+
+Flower Shop - Flower Sell Price increase
+  -Sunflowers
+
+Farmer's Stand - Vegetable Sell Price Increase
+  -Bean
+  -Cucumber
+  -Peppers
+  -Cauliflower
+  -Squash
+
+Smoothie Shop - Fruit Sell Price Increase
+  -Grapes
+  -Pineapple
+  -Watermelon
+  -Plum
+  -Apple
+  -Banana
+  -Coconut
+  
+Lemonaid Stand - Lemon Sell Price Increased
+  - Lemons
+
+Seed Shop - Increase the amount of a harvest. so plants will produce multiple per harvest.
+  -Any Seeds
+
+Miners Source - Tool Price Reduction
+  -Shovel
+  -Scythe
+  -Magnifying Glass
+
+Jewlers - Saw Speed Increase
+  - Polished Blue Stone
+  - Polished Violet Stone
+  - Polished Ruby
+  - Polished Diamond
+
+Lucky's Lucky Loot - Luck Value increased (luck defaults at one increases to 20 at level 15. no decimals. i realize some of them will be 2 increases rather than 1 but spread them out)
+  - Polished Emeralds
+
+The Black Pearl - Increase items found in Deep Mines
+  - Polished Black Pearl
+
+The Valentine's Valor - Adds more notifications with positive uplifting messages. list of messages below to add. one for each level of prestige. 
+  - Polished Pink Stone
+
+Carpenter's Shop - Orchard Trees Grow Faster
+  - Wood
+  - Sticks
+
+Carl's Construction -  increase market refresh stock. 
+  - Iron Bars
+  - Copper Bars
+
+The Bank of Pho - Coin rewards increased
+  - Gold Bars
+
+
+The sprites are in the Assests folder in the business_district folder. 
+
+the screen will have 6 dropdown boxes. 
+
+you can select the name of the store and it shows the sprite for the store. clicking on the sprite will replace the sprite image with a box that shows:
+
+
+  Deposit:dropdown to accept the items that shop accepts. [Amount box for user to type in how many to deposit. if user types in more than they have default to their max on hand]
+
+  Inventory:
+    Item 1:
+    Item 2:
+
+  progress bar to next increment.
+
+  Change Shop button. 
+
+
+
+and an x in the top right corner of that box that returns you to viewing that sprite. 
+
+15 levels of valentines valor 
+Slow and steady always wins the race, and today, you are moving at the exact right pace.
+
+Take a deep breath, hang onto your favorite branch, and let the rest of the world rush by without you.
+
+There is no rush to bloom; even the slowest creatures eventually reach the highest canopy.
+
+Give yourself permission to pause today. Rest is not falling behind, it is simply catching your breath.
+
+You do not have to move mountains today; just holding your ground is a victory.
+
+Embrace the quiet moments, because the best views in the forest are reserved for those who take their time.
+
+Slowing down doesn't mean stopping; it means you are paying attention to the beauty along the way.
+
+Let your worries hang loose below you, completely out of reach.
+
+Your gentle energy is a soothing balm to a world that is always in a hurry.
+
+There is profound strength in stillness, and you carry it effortlessly.
+
+Take things one branch at a time, trusting that you will get precisely where you need to be.
+
+Wrap yourself in a cozy blanket of patience; you are doing wonderfully just as you are.
+
+A peaceful heart is your superpower, and nobody can rush your inner calm.
+
+Rest as deeply as you need to, knowing tomorrow's trees will still be right where you left them.
+
+You are exactly where you belong, moving through life with a grace all your own.

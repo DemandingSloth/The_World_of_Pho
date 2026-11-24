@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 10
+display_name = "Tree"
+short_label = "Tr"
+base_points = 5
+sprite_index = 10
+effect_type = 9
+effect_direction = 0
+effect_value = 0
+guard_types = []
+terrain_bonuses = {2: 2}
+description = "5 points. Must be placed without touching any enemy or ally to score. +2 in Swamp."
+tutorial_tip = "Place in an isolated corner or edge. If anything ends up adjacent, it scores 0."

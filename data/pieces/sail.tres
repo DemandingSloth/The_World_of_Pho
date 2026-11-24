@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 9
+display_name = "Sail"
+short_label = "Sa"
+base_points = 2
+sprite_index = 9
+effect_type = 8
+effect_direction = 0
+effect_value = 2
+guard_types = []
+terrain_bonuses = {5: 1}
+description = "2 points. On Waterside terrain, +2 to each allied adjacent piece."
+tutorial_tip = "Only shines on Waterside maps. Place centrally to buff multiple allies."

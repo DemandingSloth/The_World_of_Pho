@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 12
+display_name = "Wind"
+short_label = "Wn"
+base_points = 3
+sprite_index = 12
+effect_type = 10
+effect_direction = 0
+effect_value = 0
+guard_types = []
+terrain_bonuses = {}
+description = "3 points. On Desert terrain, blows each adjacent tile one space away (if room behind them)."
+tutorial_tip = "Use on Desert maps to disrupt enemy formations. Triggers on placement and movement."

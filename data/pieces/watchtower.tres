@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 3
+display_name = "Watchtower"
+short_label = "WT"
+base_points = 2
+sprite_index = 3
+effect_type = 3
+effect_direction = 0
+effect_value = 4
+guard_types = []
+terrain_bonuses = {}
+description = "2 points. +4 if placed in a corner."
+tutorial_tip = "One corner is always your colour. Grab it early in placement."

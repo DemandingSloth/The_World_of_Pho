@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 7
+display_name = "Claw"
+short_label = "Cw"
+base_points = 1
+sprite_index = 7
+effect_type = 1
+effect_direction = 1
+effect_value = 1
+guard_types = []
+terrain_bonuses = {0: 1}
+description = "1 point, -1 to enemy in the direction it faces. +1 base in Indoors terrain. Rotatable."
+tutorial_tip = "Rotate to debuff enemies in any direction."

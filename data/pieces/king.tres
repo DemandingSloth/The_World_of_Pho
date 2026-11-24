@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 4
+display_name = "King"
+short_label = "K"
+base_points = 0
+sprite_index = 4
+effect_type = 4
+effect_direction = 0
+effect_value = 7
+guard_types = [1]
+terrain_bonuses = {}
+description = "0 points. +7 if all 4 diagonal neighbours are allied Soldiers."
+tutorial_tip = "Build the guard first, place the King last. One Mage can collapse the whole combo."

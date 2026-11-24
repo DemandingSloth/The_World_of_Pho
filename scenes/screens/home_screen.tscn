@@ -1,0 +1,105 @@
+[gd_scene format=3 uid="uid://11vuo0f8thxx"]
+
+[ext_resource type="Script" uid="uid://fgxeagufmabt" path="res://scripts/screens/home_screen.gd" id="1"]
+[ext_resource type="Theme" uid="uid://dysh7e5tgdj8u" path="res://theme/game_theme.tres" id="2"]
+
+[node name="HomeScreen" type="Control" unique_id=1743273155]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="CenterWrapper" type="CenterContainer" parent="." unique_id=111111001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="CenterWrapper" unique_id=1714429948]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+theme_override_constants/separation = 8
+
+[node name="PlayerInfoLabel" type="Label" parent="CenterWrapper/VBox" unique_id=604535114]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "   Player  —  Level 1"
+
+[node name="CoinLabel" type="Label" parent="CenterWrapper/VBox" unique_id=1122823966]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "   Coins: 0"
+
+[node name="Spacer1" type="Control" parent="CenterWrapper/VBox" unique_id=566843309]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="TownBtn" type="Button" parent="CenterWrapper/VBox" unique_id=895176566]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Town"
+
+[node name="InventoryBtn" type="Button" parent="CenterWrapper/VBox" unique_id=1414145551]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Inventory"
+
+[node name="MarketplaceBtn" type="Button" parent="CenterWrapper/VBox" unique_id=595545656]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Marketplace"
+
+[node name="AchievementsBtn" type="Button" parent="CenterWrapper/VBox" unique_id=1330564392]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Achievements"
+
+[node name="SettingsBtn" type="Button" parent="CenterWrapper/VBox" unique_id=774503539]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Settings"
+
+[node name="GuildsBtn" type="Button" parent="CenterWrapper/VBox" unique_id=774503541]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "⚔️ Guilds"
+
+[node name="PlayGameBtn" type="Button" parent="CenterWrapper/VBox" unique_id=177014670]
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Play Game"
+
+[node name="OnlineBattleBtn" type="Button" parent="CenterWrapper/VBox" unique_id=847951663]
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Online Battle"
+
+[node name="Spacer2" type="Control" parent="CenterWrapper/VBox" unique_id=149099]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="InventoryLabel" type="Label" parent="CenterWrapper/VBox" unique_id=1000804237]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "   Inventory:
+     Pho tiles: 0
+     Seeds: 0
+     Tools: 0"

@@ -1,0 +1,5 @@
+change gem drops in panning from 2-5 gems to 5-15
+convert xp to show truncated numbers also prospectors production screen
+moved marketplace to main screen
+upgraded storage limits. 
+fixed some of back button functionality, (still needs work)

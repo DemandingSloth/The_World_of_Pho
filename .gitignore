@@ -1,0 +1,95 @@
+# Godot 4 cache, imports, and temporary files
+.godot/
+*.translation
+*.tmp
+*.pck
+*.tpk
+
+# Godot C# / .NET (Safe to keep even if just using GDScript)
+.mono/
+data_*/
+mono_crash.*.json
+*.csproj.user
+
+# Export directories
+build/
+builds/
+export/
+exports/
+web build/
+web_build/
+
+# Export binaries & archives
+*.exe
+*.apk
+*.aab
+*.idsig
+*.side
+*.zip
+*.tar.*
+*.tgz
+*.dmg
+*.app/
+*.ipa
+
+# Shared libraries (Ignored globally, EXCEPT inside the addons folder for GDExtension plugins)
+*.wasm
+*.so
+*.dylib
+*.dll
+!addons/**/*.wasm
+!addons/**/*.so
+!addons/**/*.dylib
+!addons/**/*.dll
+
+# Android export & Gradle artifacts
+android/build/
+android/.gradle/
+android/.idea/
+.gradle/
+captures/
+*.hprof
+local.properties
+
+# Security & credentials (DO NOT COMMIT)
+credentials/
+*.keystore
+*.jks
+*.key
+*.pem
+*.p12
+*.pfx
+*BACKUP Key*
+*backup*key*
+*Backup*Key*
+.env
+.env.*
+*.secret
+
+# OS artifacts (macOS, Windows, Linux)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+
+# IDEs & editors
+.idea/
+*.iml
+.kiro/
+*.code-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# Certain Media
+*.mp4

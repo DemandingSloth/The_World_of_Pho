@@ -1,0 +1,76 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Battle System"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+EmojiFontFallback="*res://scripts/ui/emoji_font_fallback.gd"
+TrustedClock="*res://scripts/trusted_clock.gd"
+PieceSprites="*res://scripts/piece_sprites.gd"
+PieceRegistry="*res://scripts/piece_registry.gd"
+TerrainSprites="*res://scripts/terrain_sprites.gd"
+MissionBoard="*res://scripts/mission_board.gd"
+PlayerData="*res://scripts/player_data.gd"
+JewelryBonus="*res://scripts/jewelry_bonus.gd"
+NetworkManager="*res://scripts/multiplayer/network_manager.gd"
+Achievements="*res://scripts/achievement_manager.gd"
+Garden="*res://scripts/garden/garden_data.gd"
+Orchard="*res://scripts/orchard/orchard_data.gd"
+DeepMine="*res://scripts/deep_mine/deep_mine_data.gd"
+Workshop="*res://scripts/workshop/workshop_data.gd"
+PerformanceManager="*res://scripts/mobile/performance_manager.gd"
+ResponsiveLayoutManager="*res://scripts/mobile/responsive_layout_manager.gd"
+TouchInputManager="*res://scripts/mobile/touch_input_manager.gd"
+AndroidLifecycleManager="*res://scripts/mobile/android_lifecycle_manager.gd"
+MobileNetworkManager="*res://scripts/mobile/mobile_network_manager.gd"
+DiamondRingNotification="*res://scripts/ui/diamond_ring_notification.gd"
+GameNotification="*res://scripts/ui/game_notification.gd"
+NotificationWatcher="*res://scripts/ui/notification_watcher.gd"
+SupabaseClient="*res://scripts/marketplace/supabase_client.gd"
+MarketplaceAccount="*res://scripts/marketplace/marketplace_account.gd"
+Luck="*res://scripts/luck.gd"
+BusinessDistrict="*res://scripts/business/business_district_data.gd"
+TutorialSystem="*res://scripts/tutorial/tutorial_system.gd"
+GuildManager="*res://scripts/guilds/guild_manager.gd"
+GuildGarden="*res://scripts/guilds/guild_garden_data.gd"
+GuildMine="*res://scripts/guilds/guild_mine_data.gd"
+GuildStockpile="*res://scripts/guilds/guild_stockpile_data.gd"
+GuildLeaderboard="*res://scripts/guilds/guild_leaderboard_data.gd"
+GuildProduction="*res://scripts/guilds/guild_production_data.gd"
+GuildStore="*res://scripts/guilds/guild_store_data.gd"
+MoneyGun="*res://scripts/money_gun_data.gd"
+HorseRacing="*res://scripts/horse_racing/horse_racing_data.gd"
+
+[display]
+
+window/size/viewport_width=420
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[gui]
+
+theme/custom="res://theme/game_theme.tres"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true

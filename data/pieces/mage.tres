@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 2
+display_name = "Mage"
+short_label = "Mg"
+base_points = 1
+sprite_index = 2
+effect_type = 2
+effect_direction = 1
+effect_value = 0
+guard_types = []
+terrain_bonuses = {}
+description = "1 point. Fully negates the piece in the direction it faces. Rotatable."
+tutorial_tip = "Rotate to negate the enemy's King, Clergy, or Druid. A negated piece contributes nothing."

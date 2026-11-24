@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://dhnau8axe7xnt"]
+
+[ext_resource type="Script" uid="uid://dcqfo7f5ou2ya" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://d0s0uvn3p80ku" path="res://Assets/Backgrounds/nature_3/orig.png" id="2"]
+[ext_resource type="PackedScene" uid="uid://cgdotec3bjkvt" path="res://scenes/screens/top_bar.tscn" id="3"]
+[ext_resource type="Script" uid="uid://bpaew7tida508" path="res://scripts/screens/screen_navigator.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3tgcr"]
+content_margin_top = 5.0
+expand_margin_top = 5.0
+
+[node name="Main" type="Node" unique_id=2025498320]
+script = ExtResource("1")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1885339362]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScreenContainer" type="Control" parent="." unique_id=1532024785]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 66.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" parent="." unique_id=1042497004 instance=ExtResource("3")]
+theme_override_styles/panel = SubResource("StyleBoxFlat_3tgcr")
+
+[node name="ScreenNavigator" type="Node" parent="." unique_id=866277209]
+script = ExtResource("4")
+screen_container_path = NodePath("../ScreenContainer")

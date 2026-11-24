@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 11
+display_name = "Bite"
+short_label = "Bt"
+base_points = 2
+sprite_index = 11
+effect_type = 1
+effect_direction = 1
+effect_value = 2
+guard_types = []
+terrain_bonuses = {}
+description = "2 points. -2 to enemy in the direction it faces. Rotatable. Enemy only (Bears & Wolves)."
+tutorial_tip = "A stronger Claw variant used by wild enemies. Watch out for its directional debuff."

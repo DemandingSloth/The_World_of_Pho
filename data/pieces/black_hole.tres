@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 15
+display_name = "Black Hole"
+short_label = "BH"
+base_points = -2
+sprite_index = 15
+effect_type = 13
+effect_direction = 1
+effect_value = 0
+guard_types = []
+terrain_bonuses = {}
+description = "-2 points. Removes the tile in its facing direction from the board entirely. Rotatable."
+tutorial_tip = "Costly but devastating. Remove the enemy's King or Dome before scoring begins."

@@ -1,0 +1,158 @@
+=====================================================================
+Implementation Plan — Player-Run Online Marketplace (Supabase-backed)
+=====================================================================
+
+PROBLEM STATEMENT
+Add a server-authoritative, player-to-player marketplace to The World of Pho, a currently offline Godot mobile game. Players trade real inventory items (bridged with their local save) using a new "marketplace token" currency earned by completing Online Special Missions. Identity is device-ID based with no email/password. The system must be cheat-resistant despite the local save being editable, so all trade logic, token accounting, purchase limits, and mission verification run server-side in Supabase. This is the game's first backend integration.
+
+REQUIREMENTS (from planning conversation)
+- Device-ID identity, no email/password. Auto-generated unique username at registration. A recovery code folded under the existing SaveBackup export/restore so an account survives device loss.
+- Bridged item economy: listing an item moves it from the local save into server-held escrow; buying credits the buyer. Server is authoritative; local save is a cache that reconciles from the server.
+- Any sellable item type can be listed, identified by a universal string item-key (e.g. gem:diamond, resource:iron_bar, tile:pawn, tool:tractor, item:diamond_ring).
+- Sellers set price per unit and a per-buyer daily purchase limit (e.g. 3/day).
+- Price history: every completed sale logged (item, unit price, qty, timestamp) plus current stock, with a computed average shown once enough data exists.
+- New accounts start with 2000 marketplace tokens (mirrors starting gold).
+- Online Special Missions on the mission board as a separate tab (default view = existing offline missions; switching tabs populates online missions from the server). Requires an active connection. Fixed token reward per mission, server-side verification, daily earn cap.
+- Mission verification is a mix: prefer server-observable objectives (purchases, sales, listings), allow a capped set of client-reported offline objectives with plausibility limits.
+- All trade/token/mission workload runs in Supabase Edge Functions with row-level security.
+- Rollout: foundation first, build up, testing as we go.
+
+BACKGROUND (grounded in the codebase)
+- Autoloads are registered in project.godot under [autoload] and follow a consistent pattern: a Node script with load_data()/save_data() against a user://*.cfg ConfigFile, a data_changed signal, and helper APIs. PlayerData (coins default 2000, inventory, gems, resources, fruits, tools), MissionBoard (3-slot rotating missions with accepted_at/completed_at/generated_at), Garden, Orchard, Achievements, etc.
+- SaveBackup (scripts/save_backup.gd) bundles all save files into a versioned Base64 JSON code with a SHA-256 checksum. The recovery identity slots into SAVE_FILES and the payload cleanly.
+- The marketplace UI (scripts/screens/marketplace_screen.gd) already uses a dynamic tab pattern (_show_tab, highlighted tab buttons, per-tab content containers) that the mission board online tab and the new marketplace listings UI will mirror.
+- There is a P2P multiplayer subsystem (scripts/multiplayer/, mobile_network_manager.gd) but no HTTP/REST client. Supabase access will be a new networking layer using Godot's HTTPRequest.
+- Item identity is currently mixed: gems/resources/fruits/rings use string ids; tiles use Piece.Type (int); tools use int ids. The universal item-key registry normalizes all of these to strings.
+
+PROPOSED SOLUTION
+Core principle: the client never decides token balances, stock, limits, or mission rewards. It calls Edge Functions; the server validates and mutates Postgres inside transactions; the client reconciles local state from server responses.
+
+Data model (Supabase Postgres):
+- accounts — id (uuid), device_hash (text, unique), username (text, unique), token_balance (bigint), created_at, recovery_hash (text).
+- escrow — items an account has moved server-side: account_id, item_key (text), quantity (bigint).
+- listings — id, seller_id, item_key, unit_price (bigint tokens), quantity_remaining, per_buyer_daily_limit (int), status, created_at.
+- purchases — id, listing_id, buyer_id, item_key, unit_price, quantity, created_at (also the price-history event log).
+- daily_purchase_counters — buyer_id, listing_id, day (date), qty_bought (enforces per-buyer daily limit).
+- missions — server-defined online missions: id, objective_type, target, reward_tokens, window_start, window_end, verify_mode (server-observed vs client-reported).
+- mission_progress — account_id, mission_id, progress, completed_at, claimed.
+- token_ledger — append-only audit of every token change (earn/spend), for reconciliation and anti-fraud.
+- price_daily_rollup — daily per-item avg price + volume + min price, produced by a scheduled job over purchases.
+
+Edge Functions (all validation server-side, RLS on all tables): register_account, restore_account, list_item, cancel_listing, buy_listing, get_listings, get_price_history, get_online_missions, report_mission_progress, claim_mission, reconcile_account.
+
+Anti-abuse: token balance and escrow live only server-side; daily limits enforced via daily_purchase_counters inside the buy_listing transaction; mission rewards capped by a daily earn cap; server-observable missions verified from purchases/listings; client-reported missions rate-limited and plausibility-checked; append-only token_ledger for audit.
+
+WHAT THE HUMAN DOES IN SUPABASE
+Each milestone lists a "Your Supabase tasks" checklist. Across the project you will:
+1. Create the Postgres tables and RLS policies (SQL migrations provided; run them in the SQL editor).
+2. Deploy the Edge Functions (function code provided; supabase functions deploy or paste into dashboard).
+3. Set up a scheduled job (pg_cron or scheduled function) for the daily price rollup.
+4. Copy your project URL and anon key into a gitignored client config the game reads (never committed).
+5. Optionally set service-role secrets for functions in the dashboard.
+
+TASK BREAKDOWN
+Note on TDD: the Godot side uses the existing tests/ GUT-style pattern (see tests/multiplayer/). Server logic is tested with function-level tests and manual verification against a dev Supabase project. Each task ends in a demoable increment.
+
+--- MILESTONE 1 — Foundation: identity, account, token display, online missions read ---
+
+Task 1: Universal item-key registry (client, pure logic, no network)
+- Objective: Create ItemKeyRegistry (autoload or static class) mapping every tradeable local item to a canonical string key and back (gem:*, resource:*, fruit:*, tile:*, tool:*, item:diamond_ring), plus display-name/icon lookup reusing existing definitions.
+- Guidance: Enumerate from PlayerData.PROSPECTOR_GEM_ORDER, RESOURCE_DEFS, ITEM_DEFS, TOOL_DEFS, Piece.Type. Provide to_key(category, id), from_key(key), is_valid(key).
+- Tests: round-trip every known item type through to_key/from_key; reject unknown keys.
+- Demo: a unit test prints the full canonical key list for every tradeable item.
+
+Task 2: SupabaseClient networking layer (client)
+- Objective: New SupabaseClient autoload wrapping HTTPRequest with async request helpers, base URL + anon key from a gitignored config resource, JSON encode/decode, error/timeout handling, and an offline/online status signal.
+- Guidance: Single queue to serialize requests; typed result objects {ok, data, error}; never store secrets in source. Add is_online() used to gate the online tab.
+- Your Supabase tasks: create the project if not already; copy Project URL + anon public key; paste them into the client config file (local only).
+- Tests: mock/stub a request against a health endpoint; verify error handling on timeout and bad JSON.
+- Demo: SupabaseClient.ping() from a debug button logs a successful round-trip.
+
+Task 3: Accounts table + register/restore Edge Functions (server)
+- Objective: Server-side identity: accounts table with RLS, register_account (device hash in, unique username + 2000 starting tokens out, returns recovery code), restore_account (recovery code in, returns account).
+- Guidance: Device hash = salted hash of a device identifier generated client-side; username auto-generated and uniqueness-checked server-side; recovery code server-generated phrase stored hashed.
+- Your Supabase tasks: run the accounts migration; deploy register_account and restore_account; set any required secrets.
+- Tests: function tests for register (new + duplicate device), restore (valid + invalid code).
+- Demo: register from a dev script creates an account row and returns username + 2000 tokens + recovery code.
+
+Task 4: Client account provisioning + recovery under SaveBackup (client)
+- Objective: On first online entry, generate/persist a device id locally, call register_account, store the returned account handle + recovery code locally, and surface the recovery code under the existing Backup/Restore UI in home_screen.gd. Extend SaveBackup.SAVE_FILES/payload to include the marketplace identity so export/restore carries it.
+- Guidance: Keep device id in a dedicated user:// file; add marketplace identity to the versioned backup payload (bump BACKUP_VERSION); show recovery code with a "keep this safe" note next to the existing export code.
+- Tests: backup round-trip preserves marketplace identity; restore on a fresh profile re-links the account.
+- Demo: register once, export a backup code, wipe, restore, and the same marketplace account/username comes back.
+
+Task 5: Token balance display + reconcile (client + server)
+- Objective: reconcile_account Edge Function returns authoritative token balance (and later escrow); client stores it as a cache and shows it in the marketplace top bar (mirroring the coins label).
+- Guidance: Balance is display-only from the server; never mutated locally. Show "offline" state when unreachable.
+- Your Supabase tasks: deploy reconcile_account.
+- Tests: client shows server balance; shows offline state when the client is offline.
+- Demo: marketplace screen shows "2000 tokens" pulled live from the server for a new account.
+
+Task 6: Online Special Missions — read-only tab on the mission board (client + server)
+- Objective: Add a tab bar to the mission board screen (default = existing offline missions; second tab = Online Special Missions). Online tab calls get_online_missions and lists server-defined missions with objective, reward, and time window. Requires connectivity; shows a clear offline message otherwise.
+- Guidance: Mirror the _show_tab pattern from marketplace_screen.gd. Offline missions remain 100% unchanged (MissionBoard untouched). Create missions table + get_online_missions with a few seed missions.
+- Your Supabase tasks: run missions migration; seed sample missions; deploy get_online_missions.
+- Tests: tab switching keeps offline missions intact; online tab renders seeded missions; offline path shows the offline message.
+- Demo: open mission board, switch to the Online tab, see live server missions; airplane mode shows the offline notice.
+
+--- MILESTONE 2 — Trading: listings, escrow, buying, daily limits, tokens earned ---
+
+Task 7: Escrow + list_item / cancel_listing (server)
+- Objective: escrow, listings tables + RLS; list_item (moves item into escrow, creates listing with unit price + per-buyer daily limit) and cancel_listing (returns remaining escrow).
+- Guidance: All mutations transactional; validate item_key, price > 0, limit >= 1.
+- Your Supabase tasks: run migration; deploy both functions.
+- Tests: list moves quantity into escrow; cancel returns it; invalid inputs rejected.
+- Demo: a dev call lists "tile:pawn x100 @ 50 tokens, limit 3/day" and the escrow + listing rows appear.
+
+Task 8: Bridge listing to local inventory (client)
+- Objective: Listing UI in the marketplace: pick an owned item, set unit price + daily limit, confirm. On server success, deduct the item from the local PlayerData save; on failure, no local change. Reconcile escrow from server on load so the local cache stays truthful.
+- Guidance: Server call first, local deduct only after confirmed success (server-authoritative escrow avoids the dupe/loss window). Reuse item icons via ItemKeyRegistry.
+- Tests: successful list deducts locally; failed list leaves inventory intact; reconcile restores correct held/escrow view.
+- Demo: list 100 diamonds in-game; they leave your inventory and appear as your active listing.
+
+Task 9: buy_listing with daily limits + token spend (server)
+- Objective: purchases + daily_purchase_counters tables; buy_listing validates buyer token balance, stock, and per-buyer daily limit atomically; decrements stock, moves item to buyer escrow, debits/credits tokens, logs to purchases and token_ledger.
+- Guidance: Entire operation in one transaction; enforce qty_bought + qty <= per_buyer_daily_limit for the day.
+- Your Supabase tasks: run migration; deploy buy_listing.
+- Tests: buy within limit succeeds; exceeding daily limit rejected; insufficient tokens rejected; stock never goes negative under concurrent buys.
+- Demo: two dev accounts — buyer purchases 3 diamonds, is blocked on the 4th the same day.
+
+Task 10: Buy flow + claim purchased items into local inventory (client)
+- Objective: Browse listings (get_listings), buy with quantity, then pull purchased items from escrow into the local PlayerData inventory on reconcile. Update token balance display from server.
+- Guidance: Buying credits buyer escrow server-side; a claim/reconcile step adds items to the local save. Show clear messaging on limit/insufficient-token errors.
+- Tests: successful buy adds items locally after reconcile; limit/token errors surfaced; balance updates.
+- Demo: buy diamonds from another account and watch them arrive in your in-game inventory with tokens deducted.
+
+Task 11: Online mission rewards — earn tokens (server + client)
+- Objective: Implement the mission verification mix. Server-observable objectives (make a sale, complete N purchases, create a listing) verified from real tables. Client-reported offline objectives allowed via report_mission_progress with per-day caps and plausibility checks. claim_mission grants the fixed reward, respecting the daily earn cap, logged to token_ledger.
+- Guidance: mission_progress tracks per-account progress; server recomputes server-observable progress from source tables rather than trusting the client.
+- Your Supabase tasks: deploy report_mission_progress and claim_mission; set the daily earn cap config.
+- Tests: server-observed mission completes only when the real action occurred; client-reported mission respects caps; daily earn cap blocks over-farming; double-claim rejected.
+- Demo: complete an online mission (e.g. "make your first sale"), claim it, and your token balance rises by the fixed reward.
+
+--- MILESTONE 3 — Price history and charts ---
+
+Task 12: Price-history query + daily rollup (server)
+- Objective: get_price_history returns recent sale events for an item; price_daily_rollup table populated by a scheduled job computing daily average price, min price, and volume from purchases.
+- Guidance: Average shown only once a minimum sample size exists (e.g. 5 sales).
+- Your Supabase tasks: run rollup migration; enable the scheduled job (pg_cron or scheduled function); deploy get_price_history.
+- Tests: rollup computes correct averages/volume from seeded sales; history endpoint returns ordered events; average hidden below the sample threshold.
+- Demo: after several sales, the server returns a daily average price and stock for an item.
+
+Task 13: Price-history chart UI (client)
+- Objective: A history view per item in the marketplace showing stock, unit price over time (date axis), and the computed average once enough data exists.
+- Guidance: Render with Godot drawing primitives or a simple line chart control; keep it lightweight for mobile. Reuse the dark-panel styling from the marketplace screen.
+- Tests: chart renders with sample data; "not enough data yet" state shown below threshold; handles empty/offline gracefully.
+- Demo: open an item's history in-game and see the price chart with the average line.
+
+Task 14: Integration pass, polish, and end-to-end verification (client + server)
+- Objective: Wire everything together and verify the full loop on two real devices/accounts: register, earn tokens via online missions, list, buy across accounts respecting daily limits, and view price history. Add reconnect/offline resilience and final error messaging.
+- Guidance: Run through each demo scenario end-to-end; confirm offline gracefully degrades (marketplace/online missions unavailable, offline game fully playable). Confirm no orphaned code — every function and table is reachable from the UI.
+- Tests: full end-to-end scenario test; offline degradation test; backup/restore preserves identity after all features exist.
+- Demo: two accounts complete the entire marketplace loop start to finish.
+
+NOTES / CALLOUTS
+- Cost/ToS: a live player-run marketplace with real user data has privacy and store-policy implications (data retention, account deletion). Worth reviewing before public launch; an account-deletion + data-export task can be added.
+- Secrets: the anon key goes in a local, gitignored config; service-role keys stay server-side only, never committed.
+- The offline game stays fully playable throughout; all online features degrade gracefully when there is no connection.
+=====================================================================

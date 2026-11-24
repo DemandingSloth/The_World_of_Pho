@@ -1,0 +1,17 @@
+
+
+**Adding a new piece — just 2 steps:**
+
+1. Add the new type to the `Type` enum in `piece.gd`
+2. Create a new `.tres` file in `res://data/pieces/` — you can do this right in the Godot editor by right-clicking the folder → New Resource → PieceDefinition, then fill in the Inspector form
+
+That's it. The scoring, tutorial, hand builder, AI pool, and sprites all pick it up automatically.
+
+**The Inspector form fields:**
+- `piece_type` — pick from the enum dropdown
+- `display_name`, `short_label`, `base_points`, `sprite_index` — identity
+- `effect_type` — pick the behaviour from the dropdown
+- `effect_value` — the number (e.g. 1 for -1, 4 for +4 corner bonus)
+- `guard_types` — array of piece types that satisfy the King guard check
+- `terrain_bonuses` — dictionary of `{terrain_index: bonus_points}`
+- `description`, `tutorial_tip` — text shown in tooltips and How to Play

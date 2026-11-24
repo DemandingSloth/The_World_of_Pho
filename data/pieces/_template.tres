@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PieceDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/piece_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+piece_type = 0
+display_name = ""
+short_label = ""
+base_points = 0
+sprite_index = -1
+effect_type = 0
+effect_direction = 0
+effect_value = 0
+guard_types = []
+terrain_bonuses = {}
+description = ""
+tutorial_tip = ""

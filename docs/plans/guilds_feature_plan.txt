@@ -1,0 +1,390 @@
+﻿World of Pho — Guilds Feature: Implementation Plan
+1. Goals & Constraints
+* Stand-beside feature: does not modify existing marketplace, missions, garden/orchard, or mining code paths.
+* Reuses the existing mission-tracking system rather than building a parallel one.
+* New entry points: a "Guilds" button on the top bar and on the home screen.
+* Backed by Supabase, consistent with the existing marketplace backend.
+________________
+
+
+2. Data Model (Supabase)
+2.1 Core guild tables
+guilds
+column
+	type
+	notes
+	id
+	uuid, pk
+	
+
+	name
+	text
+	
+
+	leader_id
+	uuid, fk → users
+	
+
+	specialization
+	text
+	enum: gardening, mining, (future paths)
+	capacity
+	int
+	5–20
+	capacity_tier
+	int
+	tracks capacity upgrades purchased
+	upgrade_points
+	int
+	banked points spent on guild perks
+	created_at
+	timestamptz
+	
+
+	guild_members
+column
+	type
+	notes
+	guild_id
+	uuid, fk → guilds
+	
+
+	user_id
+	uuid, fk → users
+	
+
+	joined_at
+	timestamptz
+	
+
+	role
+	text
+	leader / member
+	lifetime_participation_score
+	numeric
+	for token-share calc
+	perks_active_at
+	timestamptz
+	= joined_at on a player's first-ever guild; on a switch, = joined_at + 24h if the new guild is linked to the one they left, else = joined_at + 48h (see §9)
+	left_at
+	timestamptz nullable
+	set instead of deleting the row, so contribution history survives for late payout (see §9)
+	Composite PK: (guild_id, user_id). A user can belong to at most one guild — enforce with a unique constraint on user_id.
+guild_upgrades
+column
+	type
+	notes
+	guild_id
+	uuid, fk
+	
+
+	upgrade_key
+	text
+	e.g. crop_sell_value:tomato, growth_time:tomato, gem_sell_value:ruby, prospector_cost:basic, foundry_time, capacity
+	level
+	int
+	0–10 (or capacity tier range)
+	One row per upgrade track per guild, rather than one giant JSON blob — makes querying/aggregating perk effects straightforward and keeps each track independently levelable.
+2.2 Missions
+guild_missions
+column
+	type
+	notes
+	id
+	uuid, pk
+	
+
+	guild_id
+	uuid, fk
+	
+
+	base_mission_key
+	text
+	references the existing mission catalog (same task types as solo missions)
+	difficulty
+	text
+	easy / medium / hard
+	target_amount
+	int
+	computed target after multiplier (see §3)
+	current_progress
+	int
+	sum of contributing member progress
+	status
+	text
+	active / completed / expired
+	spawned_at
+	timestamptz
+	
+
+	expires_at
+	timestamptz
+	
+
+	guild_mission_contributions
+column
+	type
+	notes
+	guild_mission_id
+	uuid, fk
+	
+
+	user_id
+	uuid, fk
+	
+
+	amount_contributed
+	int
+	
+
+	This table is the participation ledger used for token distribution — it's the bridge into the existing tracking system: when a player's tracked action matches an active guild mission's base_mission_key, the tracker also writes a contribution row here (in addition to whatever it already does for solo missions). No existing tracker logic needs to change — this is an additive listener/hook, not a modification.
+2.3 Rewards
+guild_mission_rewards
+column
+	type
+	notes
+	guild_mission_id
+	uuid, fk
+	
+
+	total_tokens_granted
+	int
+	
+
+	total_upgrade_points_granted
+	int
+	
+
+	distributed
+	boolean
+	
+
+	Token distribution is computed once on mission completion (see §4) and written per-user to whatever table the existing Marketplace token ledger already uses — reuse that table, don't fork it.
+2.4 Guild linking
+guild_links
+column
+	type
+	notes
+	guild_a_id
+	uuid, fk
+	
+
+	guild_b_id
+	uuid, fk
+	
+
+	status
+	text
+	pending / active
+	created_at
+	timestamptz
+	
+
+	A guild may hold at most one active link per other specialization (i.e. up to N-1 links, where N = number of specializations). Enforce via a partial unique index on (guild_a_id, specialization_of(guild_b_id)).
+2.5 Community garden
+guild_gardens
+column
+	type
+	notes
+	guild_id
+	uuid, fk, unique
+	one garden per gardening guild
+	grid_level
+	int
+	0–10, drives width/height via the lookup table in §6
+	width
+	int
+	
+
+	height
+	int
+	
+
+	guild_garden_tiles
+column
+	type
+	notes
+	guild_id
+	uuid, fk
+	
+
+	x
+	int
+	
+
+	y
+	int
+	
+
+	crop_key
+	text nullable
+	
+
+	planted_by
+	uuid, fk → users nullable
+	
+
+	planted_at
+	timestamptz nullable
+	
+
+	ready_at
+	timestamptz nullable
+	
+
+	harvest_permission
+	text
+	leader_only (matches the stated rule: all can plant, leader grants harvest access)
+	Same tile-state machine as the existing personal garden/orchard (planted → growing → ready → harvested); the guild version is a parallel table set, not a shared one, so nothing about the personal garden system needs touching. Planting here should call the same "planting counts toward missions" hook the personal garden already fires, just pointed at guild_garden_tiles as an additional source.
+2.6 Mining community expedition
+guild_expeditions
+column
+	type
+	notes
+	guild_id
+	uuid, fk, unique
+	
+
+	width
+	int
+	50
+	height
+	int
+	50
+	status
+	text
+	active / cleared
+	guild_expedition_tiles
+column
+	type
+	notes
+	guild_id
+	uuid, fk
+	
+
+	x, y
+	int
+	
+
+	revealed
+	boolean
+	
+
+	revealed_by
+	uuid, fk → users nullable
+	
+
+	is_mine
+	boolean
+	
+
+	adjacent_count
+	int
+	standard minesweeper adjacency value
+	Standard minesweeper reveal/flood-fill logic, just multiplayer: any guild member can reveal a tile, state is shared. Reveals should be idempotent (update ... where revealed = false) to handle concurrent taps cleanly.
+________________
+
+
+3. Mission Multiplier Logic
+Given the stated formula:
+* multiplier = (capacity + member_count) / 2
+* target = base_target × multiplier
+
+
+Resolved:
+* Missions are generated through the existing player-mission generation logic (same base target, same random fluctuation the solo mission generator already applies) — no new fluctuation system.
+* The guild multiplier ((capacity + member_count) / 2, kept as a decimal — not pre-rounded) is applied on top of that generated base target.
+* The combined result is rounded once, at the very end, right before the mission is posted. So the order is: generate base target (with existing fluctuation) → multiply by decimal guild multiplier → round → post.
+* Mission spawn cadence/frequency scaling ("pop in based on how many players/spots available") — recommend spawn rate (missions per day) scale with member_count, while spawn size scales with the multiplier above. These are separate knobs; conflating them will make balancing harder later.
+________________
+
+
+4. Token & Upgrade Point Distribution
+On guild_mission.status → completed:
+1. Sum amount_contributed across all guild_mission_contributions for that mission.
+2. total_tokens_granted is a fixed pool (existing token-value table, keyed by difficulty).
+3. Per-user token share = total_tokens_granted × (user_contribution / total_contribution).
+4. Players with zero contribution receive zero tokens (per spec: "must participate to receive tokens").
+5. total_upgrade_points_granted is banked directly to guilds.upgrade_points — not split per-user, since upgrades benefit the whole guild.
+Recommend doing this in a Postgres function/RPC (complete_guild_mission(mission_id)) rather than client-side, so completion + payout is atomic and can't be double-triggered by two members' clients racing.
+________________
+
+
+5. Guild Linking & Cross-Perk Application
+For a guild with an active link to a guild of a different specialization:
+* effective_bonus_to_linked_members = own_specialization_perk_value × (1 − cross_guild_reduction)
+
+
+Resolved: cross_guild_reduction is itself an upgradeable guild stat, not a fixed constant:
+* Starts at 20% reduction (i.e. linked members get 80% of the perk value) when a guild has never upgraded this track.
+* Upgradeable in 10 levels, −1% per level, finalizing at 10% reduction (90% of perk value) at max level.
+* This is a per-guild upgrade — each side of a link can be at a different level, so the reduction applied going from Guild A → Guild B members is A's reduction level, and B → A is B's own.
+* Add this as its own guild_upgrades row, e.g. upgrade_key = 'link_discount', level 0–10, where effective reduction = 20% − level%.
+Concretely, per the spec's example: a gardening guild with a 10% crop-growth reduction and a linked mining guild with a 12% mining-reward increase, both at the default (unupgraded) link-discount level, means the gardening guild's members get 12% × 0.80 = 9.6% mining bonus, and vice versa. Upgrading either guild's link_discount track independently improves what their own members receive from the link.
+Implementation approach: compute effective perks server-side (a view or RPC, e.g. get_effective_guild_perks(user_id)) that:
+1. Looks up the user's own guild's guild_upgrades.
+2. Looks up any linked guild(s)' guild_upgrades, applies the discount factor.
+3. Returns a merged perk table the client applies at point of use (harvest, sale, prospecting, etc.).
+This keeps perk resolution in one place rather than scattering "am I linked, and to whom" checks across every gameplay system that reads a perk.
+________________
+
+
+6. Community Garden Grid (10-Level Progression)
+Resolved visibility: guild gardens are visible only to members of that specific guild via RLS. Members of a linked guild (e.g. a linked mining guild) do not get read access to the garden — the link only shares perk values, not the garden/expedition boards themselves. Same rule applies in reverse for expeditions (§2.6): a linked gardening guild cannot view a mining guild's expedition grid. RLS policy: SELECT on guild_garden_tiles/guild_expedition_tiles requires EXISTS (SELECT 1 FROM guild_members WHERE guild_id = tiles.guild_id AND user_id = auth.uid()) — no additional clause for linked guilds.
+Store the level→dimensions lookup table (from the spec) as a static config, not computed at runtime — it's a fixed asymmetric sequence, not a formula:
+* [
+*   {"level":0,"width":5,"height":5},
+*   {"level":1,"width":10,"height":5},
+*   {"level":2,"width":10,"height":10},
+*   {"level":3,"width":18,"height":10},
+*   {"level":4,"width":18,"height":18},
+*   {"level":5,"width":27,"height":18},
+*   {"level":6,"width":27,"height":27},
+*   {"level":7,"width":38,"height":27},
+*   {"level":8,"width":38,"height":38},
+*   {"level":9,"width":50,"height":38},
+*   {"level":10,"width":50,"height":50}
+* ]
+
+
+On an upgrade, resize guild_gardens and insert new guild_garden_tiles rows for the newly-added columns/rows only (never touch existing tile rows — expansion is additive, so in-progress crops on existing tiles are undisturbed).
+Open question worth flagging to the team: at 2,500 tiles max, per-tile Supabase rows for a single guild's garden is fine, but if this pattern is reused elsewhere at larger scale it may be worth batching tile state into a compact array/JSON column instead of one row per tile. For 50×50 it's not a problem either way.
+________________
+
+
+7. Client (Android) Structure
+* New GuildsModule (or equivalent package) — isolated from existing GardenModule/MiningModule/MarketplaceModule code, communicating only through the shared tracking-system hook and the shared token ledger.
+* New top bar icon + home screen card, both simply navigating into GuildsModule's entry screen.
+* Suggested screens: Guild Home (progress, active missions, roster) → Missions tab → Upgrades/Bonus tab → Community Garden or Expedition tab (depending on specialization) → Linking tab → Leaderboard tab (once designed).
+________________
+
+
+8. Integration Point With Existing Tracking System
+The one place this plan touches existing code is a single additive hook: wherever the current tracker records progress toward a solo/marketplace mission, add a check — "is there an active guild mission with a matching base_mission_key for this user's guild?" — and if so, also write a guild_mission_contributions row. This should be implemented as a listener on the tracking event, not an edit to the existing mission-completion logic itself, so solo missions remain fully untouched.
+________________
+
+
+9. Membership Lifecycle Rules
+Resolved:
+* First-ever join: a player who has never been in a guild before becomes a full member immediately on joining — no probation. They can contribute to missions and receive upgrade benefits right away.
+* Rejoin cooldown: after a player leaves a guild and joins a different guild, they enter a probation period on the new guild before they can contribute to missions or receive that guild's upgrade perks — 48 hours normally, or 24 hours if the new guild is (at time of joining) linked to the guild they just left. This is a flat rule: it does not escalate or change based on how many times the player has switched guilds before — always 48h or 24h, never more. Track this with a guild_members.perks_active_at (or cooldown_until) timestamp column; gate both the tracker's contribution hook (§8) and the effective-perk RPC (§5) on now() >= perks_active_at.
+* Leaving mid-mission: if a member leaves a guild while a guild_mission is still active, their existing rows in guild_mission_contributions are not deleted. If that mission later completes, they still receive their fair token share per the §4 formula, computed off their recorded amount_contributed — payout isn't contingent on still being a member at completion time. They do not receive upgrade points from a mission that completes after they've left (those are banked to the guild, not the individual), and if the mission never completes, no payout occurs (consistent with the existing "must participate to receive tokens" rule — participation was recorded, but payout only fires on completion).
+* Suggested schema addition: guild_members gets a left_at (nullable) column rather than hard-deleting the row on leave, so guild_mission_contributions history stays queryable for the payout above even after the user is no longer an active member.
+10. Suggested Build Order
+1. Supabase schema (§2) + RLS policies (guild members can read their own guild's rows; only leader can write upgrades/links).
+2. Guild creation/join/leave + roster UI.
+3. Mission multiplier + spawn logic (§3), reusing existing mission catalog.
+4. Contribution hook into existing tracker (§8).
+5. Completion RPC + token/upgrade-point distribution (§4).
+6. Upgrades/bonus screen, spending upgrade points.
+7. Linking system + effective-perk resolution (§5).
+8. Community garden (§6) — Supabase-backed grid, reusing existing garden tile UI components.
+9. Mining community expedition (§2.6) — multiplayer minesweeper.
+10. Leaderboards (separate design pass, per your note).
+________________
+
+
+11. Remaining Open Questions
+All open questions have been resolved — the rejoin-cooldown question from the prior draft is now settled (§9): flat 48h normally, flat 24h when switching to a linked guild, no escalation with switch count.
+No open items remain from this design pass. Next step is implementation against the schema and rules above.
+*
