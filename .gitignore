@@ -43,9 +43,7 @@ web_build/
 !addons/**/*.dll
 
 # Android export & Gradle artifacts
-android/build/
-android/.gradle/
-android/.idea/
+
 .gradle/
 captures/
 *.hprof
