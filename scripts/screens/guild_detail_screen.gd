@@ -677,6 +677,8 @@ func _make_mission_card(m: Dictionary) -> Control:
 			var fruit_opt := OptionButton.new()
 			fruit_opt.add_theme_font_size_override("font_size", 10)
 			fruit_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			fruit_opt.clip_text = true
+			fruit_opt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 			var first_owned_id := ""
 			var first_owned_count := 0
@@ -738,6 +740,8 @@ func _make_mission_card(m: Dictionary) -> Control:
 			var produce_opt := OptionButton.new()
 			produce_opt.add_theme_font_size_override("font_size", 10)
 			produce_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			produce_opt.clip_text = true
+			produce_opt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 			var first_owned_id := ""
 			var first_owned_count := 0
@@ -949,6 +953,10 @@ func _build_mining_deposit_row(vb: VBoxContainer, base_key: String, remaining: i
 	var opt := OptionButton.new()
 	opt.add_theme_font_size_override("font_size", 10)
 	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	## Clip the caption so the dropdown's min width doesn't follow its longest
+	## item and push the whole screen wider than the viewport.
+	opt.clip_text = true
+	opt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 	var first_owned_count := 0
 	var opt_idx := 0
@@ -2661,6 +2669,8 @@ func _build_stockpile_deposit_row(vb: VBoxContainer) -> void:
 	var opt := OptionButton.new()
 	opt.add_theme_font_size_override("font_size", 10)
 	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	opt.clip_text = true
+	opt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	for i in range(owned.size()):
 		var entry: Dictionary = owned[i]
 		opt.add_item("%s: %s" % [entry["name"], PlayerData.format_number(int(entry["count"]))], i)
