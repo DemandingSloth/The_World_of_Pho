@@ -188,7 +188,11 @@ func _add_prestige_section() -> void:
 	if xp_hr > 0:
 		any = true
 		_add_row("🕯️ Passive XP  (Lv.%d)" % PlayerData.get_prestige_level("passive_xp"),
-			"+%s XP/hr" % PlayerData.format_number(xp_hr))
+			"+%s XP/hr (+%s + %.3f%%)" % [
+				PlayerData.format_number(xp_hr),
+				PlayerData.format_number(PlayerData.get_passive_xp_flat_per_hour()),
+				PlayerData.get_passive_xp_percent(),
+			])
 	if PlayerData.get_prestige_level("horse_training_cap") > 0:
 		any = true
 		_add_row("🏇 Training Cap  (Lv.%d)" % PlayerData.get_prestige_level("horse_training_cap"),

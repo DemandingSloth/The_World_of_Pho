@@ -168,8 +168,8 @@ const UPGRADE_DEFS: Array[Dictionary] = [
 	{
 		"id": "passive_xp",
 		"title": "Steady Learner",
-		"desc": "Earn a flat amount of XP every hour, even while the game is closed (1 XP per hour at level 1, up to 10,000 XP per hour at level 10).",
-		"effect_fmt": "+%s XP per hour",
+		"desc": "Earn flat XP plus a small % of your next level's XP every hour, even while the game is closed (1K + 0.005%/hr at level 1, up to 10M + 0.050%/hr at level 10).",
+		"effect_fmt": "+%s XP/hr + %.3f%% of next level",
 		"icon": "🕯️",
 	},
 	{
@@ -499,7 +499,10 @@ func _update_effect_label(lbl: Label, def: Dictionary, current_lvl: int) -> void
 			lbl.text = def["effect_fmt"] % (1 << clampi(current_lvl, 0, 10))
 		"passive_xp":
 			var p_lvl: int = clampi(current_lvl, 1, PlayerData.PASSIVE_XP_PER_HOUR.size())
-			lbl.text = def["effect_fmt"] % PlayerData.format_number(PlayerData.PASSIVE_XP_PER_HOUR[p_lvl - 1])
+			lbl.text = def["effect_fmt"] % [
+				PlayerData.format_number(PlayerData.PASSIVE_XP_PER_HOUR[p_lvl - 1]),
+				PlayerData.PASSIVE_XP_PERCENT[p_lvl - 1],
+			]
 		"horse_training_cap":
 			var t_lvl: int = clampi(current_lvl, 1, PlayerData.HORSE_TRAINING_CAP_BY_LEVEL.size())
 			lbl.text = def["effect_fmt"] % PlayerData.HORSE_TRAINING_CAP_BY_LEVEL[t_lvl - 1]
