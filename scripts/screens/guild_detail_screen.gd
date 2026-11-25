@@ -506,7 +506,7 @@ func _make_spawn_slot(diff: String, is_leader: bool) -> Control:
 	var slot_lbl := Label.new()
 	slot_lbl.text = diff.capitalize() + " Mission"
 	slot_lbl.add_theme_font_size_override("font_size", 13)
-	slot_lbl.add_theme_color_override("font_color", Color.WHITE)
+	slot_lbl.add_theme_color_override("font_color", Color(0.1, 0.1, 0.1))
 	vb.add_child(slot_lbl)
 
 	if is_leader:
@@ -520,7 +520,7 @@ func _make_spawn_slot(diff: String, is_leader: bool) -> Control:
 		var empty_lbl := Label.new()
 		empty_lbl.text = "No active mission — waiting for the leader to spawn one."
 		empty_lbl.add_theme_font_size_override("font_size", 10)
-		empty_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		empty_lbl.add_theme_color_override("font_color", Color(0.3, 0.3, 0.3))
 		vb.add_child(empty_lbl)
 
 	wrapper.add_child(card)
