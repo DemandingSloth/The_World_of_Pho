@@ -149,6 +149,7 @@ func _refresh_sale_panel() -> void:
 	var fee := int(mine.get("reclaim_fee", 10000))
 	info.text = "Asking %s tokens. When it sells, the tokens are paid to you. To take it back now, reclaim it for %s tokens (you must not be in another guild)." % [
 		PlayerData.format_number(int(mine.get("price", 0))), PlayerData.format_number(fee)]
+	info.theme_type_variation = &"HudLabel"
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", 11)
 	_sale_panel.add_child(info)

@@ -66,6 +66,7 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 14
 text = "Loading…"
 horizontal_alignment = 1
@@ -93,42 +94,49 @@ theme_override_constants/separation = 4
 
 [node name="GuildName" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 17
 horizontal_alignment = 1
 text = "Guild Name"
 
 [node name="SpecLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "Specialization: —"
 
 [node name="MembersLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "0 / 5 members"
 
 [node name="RoleLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "Your role: —"
 
 [node name="UpgradePointsLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "Upgrade Points: 0"
 
 [node name="PerksStatusLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "✅ Perks active"
 
 [node name="MissionSummaryLabel" type="Label" parent="MarginContainer/OuterVBox/InfoSection"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "0 active guild mission(s)"

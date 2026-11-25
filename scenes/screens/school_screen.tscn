@@ -28,6 +28,7 @@ layout_mode = 2
 [node name="SchoolTitle" type="Label" parent="VBox/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 18
 text = "School"
 
@@ -63,6 +64,7 @@ text = "🌱 Gardening Guide"
 
 [node name="ComingSoon" type="Label" parent="VBox"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 14
 text = "More lessons coming soon..."
 horizontal_alignment = 1

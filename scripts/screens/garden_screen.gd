@@ -73,6 +73,7 @@ func _build_ui() -> void:
 	# Title label
 	var title := Label.new()
 	title.text = "Garden"
+	title.theme_type_variation = &"HudLabel"
 	title.add_theme_font_size_override("font_size", 14)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)

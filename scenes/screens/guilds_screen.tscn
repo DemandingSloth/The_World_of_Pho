@@ -41,6 +41,7 @@ theme_override_constants/separation = 10
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 18
 text = "⚔️ Guilds"
 horizontal_alignment = 1
@@ -48,6 +49,7 @@ horizontal_alignment = 1
 [node name="StatusLabel" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
 visible = false
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = ""
@@ -55,6 +57,7 @@ text = ""
 [node name="LoadingLabel" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
 visible = false
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "Loading…"
@@ -66,18 +69,21 @@ theme_override_constants/separation = 8
 
 [node name="GuildNameLabel" type="Label" parent="MarginContainer/VBox/InGuildPanel"]
 layout_mode = 2
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 text = "My Guild"
 
 [node name="GuildSpecLabel" type="Label" parent="MarginContainer/VBox/InGuildPanel"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "Specialization: —"
 
 [node name="GuildMembersLabel" type="Label" parent="MarginContainer/VBox/InGuildPanel"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 text = "0 / 5 members"
@@ -101,6 +107,7 @@ theme_override_constants/separation = 8
 
 [node name="NoGuildHint" type="Label" parent="MarginContainer/VBox/NoGuildPanel"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 autowrap_mode = 3
 horizontal_alignment = 1

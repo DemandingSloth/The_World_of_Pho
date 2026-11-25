@@ -57,6 +57,7 @@ func _make_sort_row(value_label: String, prev_id: int, on_changed: Callable) -> 
 	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var lbl := Label.new()
 	lbl.text = "Sort:"
+	lbl.theme_type_variation = &"HudLabel"
 	lbl.add_theme_font_size_override("font_size", 12)
 	row.add_child(lbl)
 	var dd := OptionButton.new()
@@ -91,6 +92,7 @@ func _make_qty_row(prev_id: int) -> Array:
 	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var lbl := Label.new()
 	lbl.text = "Qty:"
+	lbl.theme_type_variation = &"HudLabel"
 	lbl.add_theme_font_size_override("font_size", 12)
 	row.add_child(lbl)
 	var dd := OptionButton.new()

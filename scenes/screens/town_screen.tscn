@@ -35,6 +35,7 @@ theme_override_constants/separation = 12
 
 [node name="TownTitle" type="Label" parent="CenterWrapper/MarginContainer/TownVBox" unique_id=1463468827]
 layout_mode = 2
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 18
 text = "Town"
 horizontal_alignment = 1
