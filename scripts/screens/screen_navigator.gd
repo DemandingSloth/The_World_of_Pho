@@ -178,6 +178,7 @@ func navigate_to(screen_name: String, params: Dictionary = {}) -> void:
 
 	# Step 6: Enter the new screen with parameters (Req 6.1, 6.2)
 	instance.enter(params)
+	UIColors.apply_hud_variations(instance)
 
 	# Step 7: Update top bar and background
 	_update_top_bar(instance)
@@ -254,6 +255,9 @@ func navigate_back() -> void:
 
 	# Enter with empty params for back navigation (Req 6.6)
 	instance.enter({})
+	UIColors.apply_hud_variations(instance)
+
+
 
 	# Update top bar and background
 	_update_top_bar(instance)

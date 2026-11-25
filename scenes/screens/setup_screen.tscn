@@ -29,6 +29,7 @@ theme_override_constants/separation = 12
 
 [node name="SetupTitle" type="Label" parent="MarginContainer/SetupVBox"]
 layout_mode = 2
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 18
 text = "New Campaign"
 horizontal_alignment = 1
@@ -39,6 +40,7 @@ custom_minimum_size = Vector2(0, 8)
 
 [node name="EnemyCountLabel" type="Label" parent="MarginContainer/SetupVBox"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 13
 text = "Difficulty (number of battles):"
 
@@ -72,6 +74,7 @@ text = "Brutal"
 
 [node name="TerrainLabel" type="Label" parent="MarginContainer/SetupVBox"]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 13
 text = "Terrain:"
 

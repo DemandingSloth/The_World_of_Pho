@@ -30,11 +30,13 @@ theme_override_constants/separation = 8
 
 [node name="PlayerInfoLabel" type="Label" parent="CenterWrapper/VBox" unique_id=604535114]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 14
 text = "   Player  —  Level 1"
 
 [node name="CoinLabel" type="Label" parent="CenterWrapper/VBox" unique_id=1122823966]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 13
 text = "   Coins: 0"
 

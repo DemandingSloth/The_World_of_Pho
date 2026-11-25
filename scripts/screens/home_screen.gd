@@ -778,6 +778,7 @@ func _build_xp_bar() -> void:
 
 	var xp_label := Label.new()
 	xp_label.name = "XPLabel"
+	xp_label.theme_type_variation = &"HudLabel"
 	xp_label.add_theme_font_size_override("font_size", 11)
 	xp_container.add_child(xp_label)
 
@@ -829,9 +830,9 @@ func _build_daily_bonus_section() -> void:
 	var title_label := Label.new()
 	title_label.name = "DailyTitle"
 	title_label.text = "── Bonuses ──"
+	title_label.theme_type_variation = &"HudGoldLabel"
 	title_label.add_theme_font_size_override("font_size", 12)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.modulate = Color(1.0, 0.85, 0.3)
 	section.add_child(title_label)
 
 	var btn_row := HBoxContainer.new()
@@ -859,6 +860,7 @@ func _build_daily_bonus_section() -> void:
 
 	var info_label := Label.new()
 	info_label.name = "DailyInfo"
+	info_label.theme_type_variation = &"HudLabel"
 	info_label.add_theme_font_size_override("font_size", 11)
 	btn_row.add_child(info_label)
 
@@ -916,8 +918,8 @@ func _build_streak_label() -> void:
 
 	var streak_lbl := Label.new()
 	streak_lbl.name = "StreakLabel"
+	streak_lbl.theme_type_variation = &"HudLabel"
 	streak_lbl.add_theme_font_size_override("font_size", 11)
-	streak_lbl.add_theme_color_override("font_color", Color(0.121, 0.096, 0.044, 1.0))
 
 	var insert_idx := inventory_label.get_index() + 1
 	vbox.add_child(streak_lbl)

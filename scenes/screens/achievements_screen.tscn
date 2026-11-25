@@ -29,6 +29,7 @@ theme_override_constants/separation = 10
 [node name="TitleLabel" type="Label" parent="VBox/TopRow"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 18
 text = "Achievements"
 

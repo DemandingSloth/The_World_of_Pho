@@ -30,14 +30,14 @@ theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="ScrollContainer/ContentVBox" unique_id=258961514]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_type_variation = &"HudGoldLabel"
 theme_override_font_sizes/font_size = 18
 text = "The Mines"
 horizontal_alignment = 1
 
 [node name="FlavorLabel" type="Label" parent="ScrollContainer/ContentVBox" unique_id=1705902683]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_type_variation = &"HudMutedLabel"
 theme_override_font_sizes/font_size = 11
 text = "Explore abandoned mines to find hidden treasures! "
 horizontal_alignment = 1
@@ -45,6 +45,7 @@ autowrap_mode = 2
 
 [node name="StatusLabel" type="Label" parent="ScrollContainer/ContentVBox" unique_id=1681190323]
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 text = "Coins: 0"
 horizontal_alignment = 1
@@ -86,6 +87,7 @@ alignment = 1
 [node name="ResultsLabel" type="Label" parent="ScrollContainer/ContentVBox" unique_id=1657127185]
 visible = false
 layout_mode = 2
+theme_type_variation = &"HudLabel"
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 autowrap_mode = 2
