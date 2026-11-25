@@ -103,9 +103,9 @@ jobs:
 
       - name: Configure Android keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_USER: ${{ secrets.ANDROID_KEYSTORE_USER }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 || secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_USER: ${{ secrets.SIGNING_KEY_ALIAS || secrets.ANDROID_KEYSTORE_USER }}
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD || secrets.SIGNING_STORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           mkdir -p "$RUNNER_TEMP/keystore"
           if [ -n "$KEYSTORE_BASE64" ]; then
