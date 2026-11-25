@@ -5,32 +5,53 @@ extends Node
 ## crops, winning games of Pho, or completing mining expeditions.
 
 const SAVE_PATH := "user://missions.cfg"
-const REFRESH_INTERVAL := 172800.0  ## 48 hours in seconds
+const REFRESH_INTERVAL := 172800.0 ## 48 hours in seconds
 
 signal mission_updated(slot: int)
 signal mission_completed(slot: int)
 
-enum Difficulty { EASY, MEDIUM, HARD }
+enum Difficulty {
+	EASY,
+	MEDIUM,
+	HARD,
+}
 enum MissionType {
-	GEMS, CROPS, EXPEDITIONS, DEEP_MINE, POLISH, SMELT, FRUIT, CHOP, SELL_POLISHED, SELL_BARS,
+	GEMS,
+	CROPS,
+	EXPEDITIONS,
+	DEEP_MINE,
+	POLISH,
+	SMELT,
+	FRUIT,
+	CHOP,
+	SELL_POLISHED,
+	SELL_BARS,
 	## Pho battle missions (replace the old single GAME_WINS type):
-	GAME_EASY,     ## Complete a full game (gauntlet) on Easy
-	GAME_MEDIUM,   ## Complete a full game on Medium
-	GAME_HARD,     ## Complete a full game on Hard
-	GAME_BRUTAL,   ## Complete a full game on Brutal
-	BEAT_WOLVES,   ## Beat N Wolf-Pack battles
-	BEAT_BEARS,    ## Beat N Bear battles
-	BEAT_NPCS,     ## Beat N NPC/Rival battles
-	WIN_TERRAIN,   ## Win a battle on a specific terrain
-	PROSPECTORS,   ## Acquire (buy) N prospectors — Mines category
-	DEPOSIT,       ## Deposit N items into Business District shops
+	GAME_EASY, ## Complete a full game (gauntlet) on Easy
+	GAME_MEDIUM, ## Complete a full game on Medium
+	GAME_HARD, ## Complete a full game on Hard
+	GAME_BRUTAL, ## Complete a full game on Brutal
+	BEAT_WOLVES, ## Beat N Wolf-Pack battles
+	BEAT_BEARS, ## Beat N Bear battles
+	BEAT_NPCS, ## Beat N NPC/Rival battles
+	WIN_TERRAIN, ## Win a battle on a specific terrain
+	PROSPECTORS, ## Acquire (buy) N prospectors — Mines category
+	DEPOSIT, ## Deposit N items into Business District shops
 }
 
 ## ── Mission categories ──────────────────────────────────────────
 ## A mission is chosen by first rolling a CATEGORY by weight, then a random
 ## member MissionType within it (filtered by difficulty + unlock level). Weights
 ## sum to 100: Mines 15, Garden 15, the other five 14 each.
-enum Category { MINES, GARDEN, GAMES, BUSINESS, ORCHARD, WORKSHOP, MARKETPLACE }
+enum Category {
+	MINES,
+	GARDEN,
+	GAMES,
+	BUSINESS,
+	ORCHARD,
+	WORKSHOP,
+	MARKETPLACE,
+}
 
 const CATEGORY_WEIGHTS: Dictionary = {
 	Category.MINES: 15,
@@ -47,8 +68,14 @@ const CATEGORY_TYPES: Dictionary = {
 	Category.MINES: [MissionType.EXPEDITIONS, MissionType.DEEP_MINE, MissionType.PROSPECTORS],
 	Category.GARDEN: [MissionType.CROPS],
 	Category.GAMES: [
-		MissionType.GAME_EASY, MissionType.GAME_MEDIUM, MissionType.GAME_HARD, MissionType.GAME_BRUTAL,
-		MissionType.BEAT_WOLVES, MissionType.BEAT_BEARS, MissionType.BEAT_NPCS, MissionType.WIN_TERRAIN,
+		MissionType.GAME_EASY,
+		MissionType.GAME_MEDIUM,
+		MissionType.GAME_HARD,
+		MissionType.GAME_BRUTAL,
+		MissionType.BEAT_WOLVES,
+		MissionType.BEAT_BEARS,
+		MissionType.BEAT_NPCS,
+		MissionType.WIN_TERRAIN,
 	],
 	Category.BUSINESS: [MissionType.DEPOSIT],
 	Category.ORCHARD: [MissionType.FRUIT, MissionType.CHOP],
@@ -74,16 +101,16 @@ const RARE_CHOP_CHANCE := 250
 ## chests, so gem-collection missions can be completed at any level even
 ## before Gold Panning (Lv.3) is unlocked.
 const TYPE_UNLOCK_LEVEL: Dictionary = {
-	MissionType.GEMS: 0,          ## Always available (chests grant gems)
-	MissionType.CROPS: 1,         ## Garden — Lv.1
-	MissionType.EXPEDITIONS: 2,   ## Mining expeditions — Lv.2
-	MissionType.DEEP_MINE: 20,    ## Deep Mine — Lv.20
-	MissionType.POLISH: 3,        ## Workshop saw needs gems to polish — Gold Panning Lv.3
-	MissionType.SMELT: 20,        ## Workshop foundry needs ores — Deep Mine Lv.20
-	MissionType.FRUIT: 1,         ## Orchard fruit — Orchard/Garden Lv.1
-	MissionType.CHOP: 1,          ## Chop orchard trees — Lv.1 (rare spawn)
+	MissionType.GEMS: 0, ## Always available (chests grant gems)
+	MissionType.CROPS: 1, ## Garden — Lv.1
+	MissionType.EXPEDITIONS: 2, ## Mining expeditions — Lv.2
+	MissionType.DEEP_MINE: 20, ## Deep Mine — Lv.20
+	MissionType.POLISH: 3, ## Workshop saw needs gems to polish — Gold Panning Lv.3
+	MissionType.SMELT: 20, ## Workshop foundry needs ores — Deep Mine Lv.20
+	MissionType.FRUIT: 1, ## Orchard fruit — Orchard/Garden Lv.1
+	MissionType.CHOP: 1, ## Chop orchard trees — Lv.1 (rare spawn)
 	MissionType.SELL_POLISHED: 3, ## Sell polished gems — needs gems to polish (Lv.3)
-	MissionType.SELL_BARS: 20,    ## Sell smelted bars — needs ores to smelt (Lv.20)
+	MissionType.SELL_BARS: 20, ## Sell smelted bars — needs ores to smelt (Lv.20)
 	## Pho battle missions — the Game of Pho unlocks at Lv.4.
 	MissionType.GAME_EASY: 4,
 	MissionType.GAME_MEDIUM: 4,
@@ -93,8 +120,8 @@ const TYPE_UNLOCK_LEVEL: Dictionary = {
 	MissionType.BEAT_BEARS: 4,
 	MissionType.BEAT_NPCS: 4,
 	MissionType.WIN_TERRAIN: 4,
-	MissionType.PROSPECTORS: 3,   ## Prospectors become relevant around Gold Panning (Lv.3)
-	MissionType.DEPOSIT: 25,      ## Business District unlocks at Lv.25
+	MissionType.PROSPECTORS: 3, ## Prospectors become relevant around Gold Panning (Lv.3)
+	MissionType.DEPOSIT: 25, ## Business District unlocks at Lv.25
 }
 
 
@@ -103,16 +130,30 @@ func is_type_available(type: int) -> bool:
 	var req: int = int(TYPE_UNLOCK_LEVEL.get(type, 0))
 	return PlayerData.level >= req
 
+
 ## Gem types matching PlayerData.gemstones keys
 const GEM_TYPES: Array[String] = [
-	"gold", "blue_stone", "pink_stone", "violet_stone",
-	"black_pearl", "emerald", "ruby", "diamond"
+	"gold",
+	"blue_stone",
+	"pink_stone",
+	"violet_stone",
+	"black_pearl",
+	"emerald",
+	"ruby",
+	"diamond",
 ]
 
 ## Crop names matching GardenData.PLANT_DEFS order
 const CROP_NAMES: Array[String] = [
-	"Beans", "Cucumbers", "Peppers", "Squash", "Grapes",
-	"Sunflower", "Cauliflower", "Pineapple", "Watermelon"
+	"Beans",
+	"Cucumbers",
+	"Peppers",
+	"Squash",
+	"Grapes",
+	"Sunflower",
+	"Cauliflower",
+	"Pineapple",
+	"Watermelon",
 ]
 
 ## Orchard fruit ids matching Orchard.TREE_DEFS order (tree_type index -> fruit id).
@@ -123,10 +164,10 @@ const AMOUNT_RANGES: Dictionary = {
 	Difficulty.EASY: {
 		MissionType.GEMS: [1, 5],
 		MissionType.CROPS: [1, 5],
-		MissionType.GAME_EASY: [1, 1],     ## Complete an easy game
-		MissionType.BEAT_WOLVES: [1, 2],   ## Beat 1-2 wolves
-		MissionType.WIN_TERRAIN: [1, 1],   ## Win a game on a specific terrain
-		MissionType.DEPOSIT: [1, 5],       ## Deposit items into businesses
+		MissionType.GAME_EASY: [1, 1], ## Complete an easy game
+		MissionType.BEAT_WOLVES: [1, 2], ## Beat 1-2 wolves
+		MissionType.WIN_TERRAIN: [1, 1], ## Win a game on a specific terrain
+		MissionType.DEPOSIT: [1, 5], ## Deposit items into businesses
 	},
 	Difficulty.MEDIUM: {
 		MissionType.GEMS: [30, 50],
@@ -136,10 +177,10 @@ const AMOUNT_RANGES: Dictionary = {
 		MissionType.FRUIT: [25, 35],
 		MissionType.SELL_POLISHED: [25, 35],
 		MissionType.SELL_BARS: [25, 35],
-		MissionType.GAME_MEDIUM: [1, 1],   ## Complete a medium game
-		MissionType.BEAT_BEARS: [3, 5],    ## Beat 3-5 bears
-		MissionType.PROSPECTORS: [1, 2],   ## Acquire 1-2 prospectors
-		MissionType.DEPOSIT: [25, 35],      ## Deposit items into businesses
+		MissionType.GAME_MEDIUM: [1, 1], ## Complete a medium game
+		MissionType.BEAT_BEARS: [3, 5], ## Beat 3-5 bears
+		MissionType.PROSPECTORS: [1, 2], ## Acquire 1-2 prospectors
+		MissionType.DEPOSIT: [25, 35], ## Deposit items into businesses
 	},
 	Difficulty.HARD: {
 		MissionType.GEMS: [160, 300],
@@ -150,11 +191,11 @@ const AMOUNT_RANGES: Dictionary = {
 		MissionType.SMELT: [100, 200],
 		MissionType.SELL_POLISHED: [160, 300],
 		MissionType.SELL_BARS: [160, 300],
-		MissionType.GAME_HARD: [1, 2],     ## Complete 1-2 hard games
-		MissionType.GAME_BRUTAL: [1, 1],   ## Complete 1 brutal game
-		MissionType.BEAT_NPCS: [5, 7],     ## Beat 5-7 NPCs
-		MissionType.PROSPECTORS: [15, 20],   ## Acquire 3-5 prospectors
-		MissionType.DEPOSIT: [160, 300],     ## Deposit items into businesses
+		MissionType.GAME_HARD: [1, 2], ## Complete 1-2 hard games
+		MissionType.GAME_BRUTAL: [1, 1], ## Complete 1 brutal game
+		MissionType.BEAT_NPCS: [5, 7], ## Beat 5-7 NPCs
+		MissionType.PROSPECTORS: [15, 20], ## Acquire 3-5 prospectors
+		MissionType.DEPOSIT: [160, 300], ## Deposit items into businesses
 	},
 }
 
@@ -164,9 +205,9 @@ const CHOP_AMOUNT_RANGE: Array[int] = [1, 15]
 
 ## Chest level awarded on completion per difficulty
 const CHEST_LEVELS: Dictionary = {
-	Difficulty.EASY: 0,    ## Level 1 chest (index 0)
-	Difficulty.MEDIUM: 4,  ## Level 5 chest (index 6)
-	Difficulty.HARD: 9,    ## Level 10 chest (index 9)
+	Difficulty.EASY: 0, ## Level 1 chest (index 0)
+	Difficulty.MEDIUM: 4, ## Level 5 chest (index 6)
+	Difficulty.HARD: 9, ## Level 10 chest (index 9)
 }
 
 ## Coin bonus per required item, scaled by difficulty
@@ -190,7 +231,7 @@ const COIN_PER_ITEM: Dictionary = {
 ##   "accepted_at": float,     ## unix timestamp when player accepted (0 if not yet)
 ##   "completed_at": float,    ## unix timestamp when progress reached required (0 if not yet)
 ## }
-var missions: Array = [null, null, null]  ## [easy, medium, hard]
+var missions: Array = [null, null, null] ## [easy, medium, hard]
 
 
 func _ready() -> void:
@@ -211,7 +252,9 @@ func _ready() -> void:
 func _connect_signals() -> void:
 	if Garden != null and not Garden.garden_updated.is_connected(_on_garden_updated):
 		Garden.garden_updated.connect(_on_garden_updated)
-	if Achievements != null and not Achievements.achievement_unlocked.is_connected(_on_achievement_unlocked):
+	if Achievements != null and not Achievements.achievement_unlocked.is_connected(
+			_on_achievement_unlocked
+		):
 		Achievements.achievement_unlocked.connect(_on_achievement_unlocked)
 
 
@@ -219,7 +262,6 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST \
 			or what == NOTIFICATION_APPLICATION_PAUSED:
 		save_data()
-
 
 ## ── Public API ─────────────────────────────────────────────────
 
@@ -300,10 +342,14 @@ func on_battle_won(enemy_type: int, terrain: int) -> void:
 		var t := int(m["type"])
 		var hit := false
 		match t:
-			MissionType.BEAT_WOLVES: hit = (enemy_type == 0)
-			MissionType.BEAT_BEARS:  hit = (enemy_type == 1)
-			MissionType.BEAT_NPCS:   hit = (enemy_type == 2)
-			MissionType.WIN_TERRAIN: hit = (int(m["target_key"]) == terrain)
+			MissionType.BEAT_WOLVES:
+				hit = (enemy_type == 0)
+			MissionType.BEAT_BEARS:
+				hit = (enemy_type == 1)
+			MissionType.BEAT_NPCS:
+				hit = (enemy_type == 2)
+			MissionType.WIN_TERRAIN:
+				hit = (int(m["target_key"]) == terrain)
 		if hit:
 			_add_progress(i)
 			changed = true
@@ -311,8 +357,10 @@ func on_battle_won(enemy_type: int, terrain: int) -> void:
 		## Guild hook: map enemy_type to the most specific matching type.
 		var guild_type := MissionType.BEAT_WOLVES
 		match enemy_type:
-			1: guild_type = MissionType.BEAT_BEARS
-			2: guild_type = MissionType.BEAT_NPCS
+			1:
+				guild_type = MissionType.BEAT_BEARS
+			2:
+				guild_type = MissionType.BEAT_NPCS
 		_record_guild_contribution(guild_type)
 		save_data()
 
@@ -334,9 +382,12 @@ func on_run_completed(enemy_count: int) -> void:
 		## Guild hook: map enemy_count back to the game mission type.
 		var guild_type := MissionType.GAME_EASY
 		match enemy_count:
-			3: guild_type = MissionType.GAME_MEDIUM
-			5: guild_type = MissionType.GAME_HARD
-			9: guild_type = MissionType.GAME_BRUTAL
+			3:
+				guild_type = MissionType.GAME_MEDIUM
+			5:
+				guild_type = MissionType.GAME_HARD
+			9:
+				guild_type = MissionType.GAME_BRUTAL
 		_record_guild_contribution(guild_type)
 		save_data()
 
@@ -549,7 +600,11 @@ func claim_mission(slot: int) -> bool:
 
 	## Chest reward via Achievements system
 	var chest_level: int = CHEST_LEVELS[m["difficulty"]]
-	var rewards: Array = PlayerData._generate_level_rewards_from_budget((chest_level + 1) * 300, PlayerData.get_chest_piece_cap(chest_level), chest_level)
+	var rewards: Array = PlayerData._generate_level_rewards_from_budget(
+		(chest_level + 1) * 300,
+		PlayerData.get_chest_piece_cap(chest_level),
+		chest_level,
+	)
 	PlayerData._add_reward_pieces(rewards)
 	PlayerData.save_data()
 
@@ -560,11 +615,29 @@ func claim_mission(slot: int) -> bool:
 		if reward is Dictionary and reward.has("type") and reward["type"] == "coins":
 			display_rewards.append({"type": "coins", "amount": int(reward["amount"])})
 		elif reward is Dictionary and reward.get("type", "") == "sapling":
-			display_rewards.append({"type": "sapling", "tree_type": int(reward["tree_type"]), "quantity": int(reward.get("quantity", 1))})
+			display_rewards.append(
+				{
+					"type": "sapling",
+					"tree_type": int(reward["tree_type"]),
+					"quantity": int(reward.get("quantity", 1)),
+				}
+			)
 		elif reward is Dictionary and reward.get("type", "") == "prospector":
-			display_rewards.append({"type": "prospector", "gem_type": str(reward["gem_type"]), "quantity": int(reward.get("quantity", 1))})
+			display_rewards.append(
+				{
+					"type": "prospector",
+					"gem_type": str(reward["gem_type"]),
+					"quantity": int(reward.get("quantity", 1)),
+				}
+			)
 		elif reward is Dictionary and reward.has("seed_type"):
-			display_rewards.append({"type": "seed", "plant_type": int(reward["seed_type"]), "quantity": int(reward["quantity"])})
+			display_rewards.append(
+				{
+					"type": "seed",
+					"plant_type": int(reward["seed_type"]),
+					"quantity": int(reward["quantity"]),
+				}
+			)
 		elif reward is Dictionary and reward.has("gem_type"):
 			## Look up the gem value from the order table since the new generator
 			## doesn't embed a "value" key in gem reward entries.
@@ -573,12 +646,19 @@ func claim_mission(slot: int) -> bool:
 				if gdef["gem_type"] == reward["gem_type"]:
 					gval = int(gdef["value"])
 					break
-			display_rewards.append({"type": "gemstone", "gem_type": str(reward["gem_type"]), "value": gval})
+			display_rewards.append(
+				{"type": "gemstone", "gem_type": str(reward["gem_type"]), "value": gval}
+			)
 		else:
 			display_rewards.append({"type": "piece", "piece_type": reward})
-	ChestPopup.enqueue(get_tree(), chest_level, display_rewards,
+	ChestPopup.enqueue(
+		get_tree(),
+		chest_level,
+		display_rewards,
 		"Mission Complete!",
-		"%s mission: %s\n+%s coins" % [diff_names[m["difficulty"]], m["target_label"], PlayerData.format_number(coin_reward)])
+		"%s mission: %s\n+%s coins"
+		% [diff_names[m["difficulty"]], m["target_label"], PlayerData.format_number(coin_reward)],
+	)
 
 	mission_completed.emit(slot)
 
@@ -625,7 +705,6 @@ func refresh_mission(slot: int) -> bool:
 	PlayerData.data_changed.emit()
 	_replace_mission(slot)
 	return true
-
 
 ## ── Internal ───────────────────────────────────────────────────
 
@@ -727,8 +806,8 @@ func _generate_mission(difficulty: Difficulty) -> Dictionary:
 		## Roll a CATEGORY by weight (Mines/Garden 15%, others 14%), but only
 		## among categories that actually have a valid type for this difficulty
 		## (respecting unlock levels). Then pick a random type within it.
-		var eligible: Array = []      ## [category, ...]
-		var weights: Array = []       ## parallel weights
+		var eligible: Array = [] ## [category, ...]
+		var weights: Array = [] ## parallel weights
 		for cat in CATEGORY_TYPES.keys():
 			if not _valid_types_in_category(cat, difficulty).is_empty():
 				eligible.append(cat)
@@ -762,7 +841,10 @@ func _generate_mission(difficulty: Difficulty) -> Dictionary:
 		MissionType.GAME_MEDIUM:
 			target_label = "Complete a game of Pho on Medium"
 		MissionType.GAME_HARD:
-			target_label = "Complete %d game%s of Pho on Hard" % [required, "s" if required > 1 else ""]
+			target_label = "Complete %d game%s of Pho on Hard" % [
+				required,
+				"s" if required > 1 else "",
+			]
 		MissionType.GAME_BRUTAL:
 			target_label = "Complete a game of Pho on Brutal"
 		MissionType.BEAT_WOLVES:
@@ -776,19 +858,34 @@ func _generate_mission(difficulty: Difficulty) -> Dictionary:
 			target_key = terrain_idx
 			target_label = "Win a game of Pho on %s" % Terrain.get_terrain_name(terrain_idx)
 		MissionType.EXPEDITIONS:
-			target_label = "Complete %d mining expedition%s" % [required, "s" if required > 1 else ""]
+			target_label = "Complete %d mining expedition%s" % [
+				required,
+				"s" if required > 1 else "",
+			]
 		MissionType.DEEP_MINE:
-			target_label = "Dig %d tile%s in the Deep Mine" % [required, "s" if required > 1 else ""]
+			target_label = "Dig %d tile%s in the Deep Mine" % [
+				required,
+				"s" if required > 1 else "",
+			]
 		MissionType.POLISH:
-			target_label = "Polish %d gem%s in the Workshop" % [required, "s" if required > 1 else ""]
+			target_label = "Polish %d gem%s in the Workshop" % [
+				required,
+				"s" if required > 1 else "",
+			]
 		MissionType.SMELT:
 			target_label = "Smelt %d bar%s in the Foundry" % [required, "s" if required > 1 else ""]
 		MissionType.FRUIT:
 			var fruit_idx: int = randi() % FRUIT_IDS.size()
 			target_key = fruit_idx
-			target_label = "Harvest %d %s from the Orchard" % [required, FRUIT_IDS[fruit_idx].capitalize()]
+			target_label = "Harvest %d %s from the Orchard" % [
+				required,
+				FRUIT_IDS[fruit_idx].capitalize(),
+			]
 		MissionType.CHOP:
-			target_label = "Chop down %d tree%s in the Orchard" % [required, "s" if required > 1 else ""]
+			target_label = "Chop down %d tree%s in the Orchard" % [
+				required,
+				"s" if required > 1 else "",
+			]
 		MissionType.SELL_POLISHED:
 			target_label = "Sell %d polished gem%s" % [required, "s" if required > 1 else ""]
 		MissionType.SELL_BARS:
@@ -796,7 +893,10 @@ func _generate_mission(difficulty: Difficulty) -> Dictionary:
 		MissionType.PROSPECTORS:
 			target_label = "Acquire %d prospector%s" % [required, "s" if required > 1 else ""]
 		MissionType.DEPOSIT:
-			target_label = "Deposit %d item%s into your businesses" % [required, "s" if required > 1 else ""]
+			target_label = "Deposit %d item%s into your businesses" % [
+				required,
+				"s" if required > 1 else "",
+			]
 
 	return {
 		"type": int(type),
@@ -816,13 +916,12 @@ func _generate_mission(difficulty: Difficulty) -> Dictionary:
 ## Garden signal — scan grid for harvests (garden_updated fires on harvest too,
 ## but we track via the direct on_crop_harvested call from garden_data).
 func _on_garden_updated() -> void:
-	pass  ## Crop tracking handled via direct on_crop_harvested calls
+	pass ## Crop tracking handled via direct on_crop_harvested calls
 
 
 ## Not used for progress but kept for future expansion.
 func _on_achievement_unlocked(_id: String, _level: int, _chest: int) -> void:
 	pass
-
 
 ## ── Persistence ────────────────────────────────────────────────
 
@@ -837,7 +936,11 @@ func save_data() -> void:
 		config.set_value(sec, "type", int(m["type"]))
 		config.set_value(sec, "difficulty", int(m["difficulty"]))
 		config.set_value(sec, "target_label", str(m.get("target_label", "")))
-		config.set_value(sec, "target_key", str(m["target_key"]) if m.get("target_key") != null else "")
+		config.set_value(
+			sec,
+			"target_key",
+			str(m["target_key"]) if m.get("target_key") != null else "",
+		)
 		config.set_value(sec, "target_key_is_int", typeof(m.get("target_key")) == TYPE_INT)
 		config.set_value(sec, "required", int(m["required"]))
 		config.set_value(sec, "progress", int(m["progress"]))

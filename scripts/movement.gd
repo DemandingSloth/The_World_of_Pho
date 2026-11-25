@@ -10,7 +10,7 @@ enum MoveResult {
 	PIECE_ALREADY_MOVED,
 	INVALID_DESTINATION,
 	NOT_YOUR_TURN,
-	PHASE_OVER
+	PHASE_OVER,
 }
 
 var board: BoardState
@@ -26,23 +26,26 @@ var current_round: int = 1
 var current_turn: Piece.Owner
 
 ## Tracks which pieces have already moved: piece -> true
-var moved_pieces: Dictionary = {}
+var moved_pieces: Dictionary = { }
 
 ## Whether the movement phase is complete
 var phase_complete: bool = false
 
+
 func _init(p_board: BoardState) -> void:
 	board = p_board
 
+
 ## Coin flip to decide who goes first. Returns the first mover.
 func coin_flip() -> Piece.Owner:
-	first_mover  = Piece.Owner.PLAYER if randi() % 2 == 0 else Piece.Owner.ENEMY
-	second_mover = Piece.Owner.ENEMY  if first_mover == Piece.Owner.PLAYER else Piece.Owner.PLAYER
+	first_mover = Piece.Owner.PLAYER if randi() % 2 == 0 else Piece.Owner.ENEMY
+	second_mover = Piece.Owner.ENEMY if first_mover == Piece.Owner.PLAYER else Piece.Owner.PLAYER
 	current_turn = first_mover
 	current_round = 1
 	phase_complete = false
 	moved_pieces.clear()
 	return first_mover
+
 
 ## Attempt to move a piece from (from_r, from_c) to (to_r, to_c).
 ## If to cell is occupied by an allied piece, swap them.
@@ -85,6 +88,7 @@ func attempt_move(owner: Piece.Owner, from_r: int, from_c: int, to_r: int, to_c:
 	_advance_turn()
 	return MoveResult.OK
 
+
 ## Advance turn order:
 ## Round 1: first_mover → second_mover → (round 2)
 ## Round 2: first_mover → second_mover → phase complete
@@ -97,6 +101,7 @@ func _advance_turn() -> void:
 	else:
 		_end_round()
 
+
 func _end_round() -> void:
 	if current_round >= 2:
 		phase_complete = true
@@ -108,6 +113,7 @@ func _end_round() -> void:
 			if not _has_movable_pieces(second_mover):
 				phase_complete = true
 
+
 ## Returns true if the given owner has at least one piece that hasn't moved yet.
 func _has_movable_pieces(owner: Piece.Owner) -> bool:
 	for entry in board.get_all_pieces(owner):
@@ -115,6 +121,7 @@ func _has_movable_pieces(owner: Piece.Owner) -> bool:
 		if not moved_pieces.has(piece):
 			return true
 	return false
+
 
 func get_turn_label() -> String:
 	if phase_complete:

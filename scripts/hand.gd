@@ -1,6 +1,9 @@
 class_name Hand
 extends RefCounted
 
+
+
+
 ## The collection of pieces a player has available to place.
 ## For testing, the player draws a fixed set.
 ## Enemy hand mirrors the same set for balance testing.

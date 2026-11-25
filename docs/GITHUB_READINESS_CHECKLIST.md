@@ -253,6 +253,7 @@ Before pushing to GitHub, you need confidence that nothing is broken and that te
 
 - [ ] **8.1 Create Headless Test Runner Script**:
   - Create `tests/run_all_tests.gd` that discovers and runs all test scripts in `tests/`, reporting pass/fail status and returning exit code 0 or 1.
+
 - [ ] **8.2 Verify Project Compilation**:
   - Run the test suite via:
 
