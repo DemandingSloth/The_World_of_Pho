@@ -567,7 +567,7 @@ func _refresh_foundry_status() -> void:
 		_foundry_status.text = "%d bar(s) ready to collect!  (%d/%d slots)" % [ready, load_count, cap]
 	else:
 		var secs := Workshop.foundry_next_ready_seconds()
-		var msg := "Smelting %d ore(s), %d at a time… next in %s" % [load_count - ready, per, _format_time(secs)]
+		var msg := "Smelting %d ore(s), %d at a time… next in %s" % [load_count - ready, per, FormatUtils.format_duration(secs)]
 		if ready > 0:
 			msg += "  (%d ready)" % ready
 		msg += "  (%d/%d slots)" % [load_count, cap]
@@ -610,7 +610,7 @@ func _refresh_saw_status() -> void:
 		_saw_status.text = "%d polished gem(s) ready to collect!  (%d/%d slots)" % [ready, load_count, cap]
 	else:
 		var secs := Workshop.next_ready_seconds()
-		var msg := "Cutting %d gem(s), %d at a time… next in %s" % [load_count - ready, per, _format_time(secs)]
+		var msg := "Cutting %d gem(s), %d at a time… next in %s" % [load_count - ready, per, FormatUtils.format_duration(secs)]
 		if ready > 0:
 			msg += "  (%d ready)" % ready
 		msg += "  (%d/%d slots)" % [load_count, cap]
@@ -649,17 +649,6 @@ func _refresh_hourglass() -> void:
 	_hourglass_label.text = "Uses left today: %d / %d" % [remaining, limit]
 	if _hourglass_btn:
 		_hourglass_btn.disabled = remaining <= 0
-
-
-func _format_time(secs: float) -> String:
-	if secs <= 0.0:
-		return "ready"
-	var s := int(ceil(secs))
-	var m := s / 60
-	var r := s % 60
-	if m > 0:
-		return "%dm %ds" % [m, r]
-	return "%ds" % r
 
 
 ## ── Quantity dropdown helpers ──────────────────────────────────

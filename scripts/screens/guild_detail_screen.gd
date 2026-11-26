@@ -3076,7 +3076,7 @@ func _apply_countdown_text(lbl: Label, finish_at: float) -> void:
 		lbl.text = "✅ Ready"
 		lbl.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5))
 	else:
-		lbl.text = _format_duration(rem)
+		lbl.text = FormatUtils.format_duration(rem)
 		lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.6))
 
 
@@ -3097,19 +3097,6 @@ func _update_collect_button() -> void:
 	var ready := GuildProduction.ready_count()
 	_prod_collect_btn.disabled = ready <= 0
 	_prod_collect_btn.text = "Collect Finished (%d)" % ready if ready > 0 else "Collect Finished"
-
-
-## "1h 23m", "5m 09s", "42s".
-func _format_duration(seconds: float) -> String:
-	var s := int(ceil(seconds))
-	var h := s / 3600
-	var m := (s % 3600) / 60
-	var sec := s % 60
-	if h > 0:
-		return "%dh %dm" % [h, m]
-	if m > 0:
-		return "%dm %02ds" % [m, sec]
-	return "%ds" % sec
 
 
 func _on_production_enqueue_pressed() -> void:

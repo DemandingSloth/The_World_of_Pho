@@ -886,17 +886,7 @@ func seconds_until(iso: String) -> float:
 
 ## A short "Hh Mm" / "Mm Ss" countdown for `secs` (<=0 -> "any moment").
 func format_countdown(secs: float) -> String:
-	var s := int(max(0.0, secs))
-	if s <= 0:
-		return "any moment"
-	var h := s / 3600
-	var m := (s % 3600) / 60
-	var sec := s % 60
-	if h > 0:
-		return "%dh %dm" % [h, m]
-	if m > 0:
-		return "%dm %ds" % [m, sec]
-	return "%ds" % sec
+	return FormatUtils.format_countdown(secs)
 
 
 ## Recently-RESOLVED races the caller was in (entered a horse OR bet), within

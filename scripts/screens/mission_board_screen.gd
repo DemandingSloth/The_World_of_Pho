@@ -270,23 +270,10 @@ func _format_time_until(iso_utc: String) -> String:
 	if secs <= 0:
 		return "soon"
 	var days := secs / 86400
-	var hours := (secs % 86400) / 3600
-	var mins := (secs % 3600) / 60
 	if days > 0:
+		var hours := (secs % 86400) / 3600
 		return "%dd %dh" % [days, hours]
-	if hours > 0:
-		return "%dh %dm" % [hours, mins]
-	return "%dm" % mins
-
-
-## Compact "Xh Ym" / "Xm" for a seconds count (used by the boost readout).
-func _format_secs(secs: int) -> String:
-	secs = maxi(secs, 0)
-	var hours := secs / 3600
-	var mins := (secs % 3600) / 60
-	if hours > 0:
-		return "%dh %dm" % [hours, mins]
-	return "%dm" % maxi(mins, 1)
+	return FormatUtils.format_duration(float(secs))
 
 
 func _add_online_notice(text: String) -> void:
@@ -334,7 +321,7 @@ func _add_online_mission_row(m: Dictionary) -> void:
 		## Trader's Tongue is active: the server will pay double on claim.
 		reward_lbl.text = "Reward: %s marketplace tokens  (%s × 2 🗣️ Trader's Tongue, %s left)" % [
 			PlayerData.format_number(base_reward * 2), PlayerData.format_number(base_reward),
-			_format_secs(PlayerData.boost_seconds_remaining("traders_tongue"))]
+			FormatUtils.format_duration(PlayerData.boost_seconds_remaining("traders_tongue"))]
 		reward_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		reward_lbl.add_theme_color_override("font_color", Color(0.5, 1.0, 0.6))
 	else:
