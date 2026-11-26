@@ -504,6 +504,26 @@ func buy(breed: String, horse_name: String, is_suggestion: bool = false) -> Dict
 	return _friendly(res)
 
 
+## Renames one of the player's horses (migration 112). Free. Same rules as
+## naming at purchase: 1..24 characters, profanity-filtered. Curated
+## suggestions skip the character check (they're pre-vetted).
+func rename_horse(horse_id: String, new_name: String, is_suggestion: bool = false) -> Dictionary:
+	var clean := new_name.strip_edges()
+	if clean.length() < 1 or clean.length() > 24:
+		return {"ok": false, "error": "invalid_name", "message": "Names must be 1-24 characters."}
+	if not is_suggestion and not PlayerData.is_name_clean(clean):
+		return {"ok": false, "error": "invalid_name", "message": "That name contains inappropriate language."}
+	var res := await _rpc("rename_horse", {
+		"p_device_hash": _device_hash(),
+		"p_horse_id":    horse_id,
+		"p_name":        clean,
+	})
+	if not res.get("ok", false):
+		return _friendly(res)
+	await refresh()
+	return _friendly(res)
+
+
 ## Sells a horse back to the game for coins (credited locally on success).
 func sell(horse_id: String) -> Dictionary:
 	var res := await _rpc("sell_horse", {
@@ -694,6 +714,10 @@ func train(horse_id: String, kind: String, score: int) -> Dictionary:
 				"message": "%s is already maxed." % str(d.get("name", kind))}
 		return {"ok": false, "error": "already_trained",
 			"message": "Already did %s today. Try again tomorrow." % str(d.get("name", kind))}
+
+	## Push current horseshoe/prestige levels first: the server raises this
+	## session's cap from them (migration 111), and shoe counts can change.
+	await PlayerData.sync_horse_prestige(false)
 
 	## Score is an integer point count (sprint green sections / hurdles cleared /
 	## groom center-hits). It can exceed 100; the server floors at 0 and caps the
@@ -1269,6 +1293,9 @@ func train_paddock(horse_id: String, kind: String, score: int) -> Dictionary:
 	var d := training_def(kind)
 	if d.is_empty():
 		return {"ok": false, "error": "invalid_kind", "message": "Unknown training."}
+	## Keep our own shoe/prestige levels current (used when WE own the horse;
+	## a guildmate's horse uses the levels its owner last reported).
+	await PlayerData.sync_horse_prestige(false)
 	var res := await _rpc("train_paddock_horse", {
 		"p_device_hash": _device_hash(),
 		"p_horse_id":    horse_id,

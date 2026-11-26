@@ -391,13 +391,26 @@ func _make_horse_row(h: Dictionary) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info)
 
+	## Name + a small ✏ rename button.
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 4)
+	info.add_child(name_row)
 	var name_lbl := Label.new()
 	name_lbl.text = str(h.get("name", "?"))
 	name_lbl.clip_text = true
 	name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.add_theme_font_size_override("font_size", 13)
 	name_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
-	info.add_child(name_lbl)
+	name_row.add_child(name_lbl)
+	var rename_btn := Button.new()
+	rename_btn.text = "✏"
+	rename_btn.tooltip_text = "Rename"
+	rename_btn.add_theme_font_size_override("font_size", 11)
+	rename_btn.custom_minimum_size = Vector2(30, 26)
+	rename_btn.pressed.connect(_on_rename_pressed.bind(
+		str(h.get("id", "")), str(h.get("name", ""))))
+	name_row.add_child(rename_btn)
 
 	var breed_lbl := Label.new()
 	breed_lbl.text = str(HorseRacing.breed_def(str(h.get("breed", ""))).get("name", h.get("breed", "")))
@@ -500,6 +513,60 @@ func _make_horse_row(h: Dictionary) -> Control:
 	actions.add_child(sell_btn)
 
 	return panel
+
+
+# ── Rename ────────────────────────────────────────────────────────
+
+## Small popup to rename a horse: text box (pre-filled), 🎲 for a suggested
+## name, and Save. Free.
+func _on_rename_pressed(horse_id: String, horse_name: String) -> void:
+	var dialog := AcceptDialog.new()
+	dialog.title = "Rename %s" % horse_name
+	dialog.ok_button_text = "Save"
+	dialog.add_cancel_button("Cancel")
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	box.custom_minimum_size = Vector2(260, 0)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	var edit := LineEdit.new()
+	edit.text = horse_name
+	edit.max_length = 24
+	edit.placeholder_text = "New name (1-24 characters)"
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.custom_minimum_size = Vector2(0, 38)
+	row.add_child(edit)
+	## Tracks whether the current text came from the suggestion list.
+	var picked := {"suggestion": ""}
+	var dice := Button.new()
+	dice.text = "🎲"
+	dice.custom_minimum_size = Vector2(40, 38)
+	dice.pressed.connect(func():
+		var s := _random_suggestion()
+		picked["suggestion"] = s
+		edit.text = s)
+	row.add_child(dice)
+	box.add_child(row)
+
+	dialog.add_child(box)
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(300, 0))
+	dialog.confirmed.connect(func():
+		var new_name := edit.text.strip_edges()
+		dialog.queue_free()
+		if new_name == horse_name:
+			return
+		_set_status("Renaming…")
+		var res := await HorseRacing.rename_horse(horse_id, new_name,
+			new_name == str(picked["suggestion"]))
+		if res.get("ok", false):
+			_set_status("%s is now named %s." % [horse_name, new_name])
+		else:
+			_set_status(str(res.get("message", "Couldn't rename.")))
+		_rebuild())
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.close_requested.connect(dialog.queue_free)
 
 
 # ── Training ──────────────────────────────────────────────────────
