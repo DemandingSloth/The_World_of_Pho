@@ -65,11 +65,16 @@ func setup(guild_id: String, cols: int, rows: int) -> void:
 	_refresh_timer.timeout.connect(_on_timer_tick)
 	add_child(_refresh_timer)
 	GuildGarden.garden_updated.connect(_on_garden_updated)
+	## Missions load/refresh independently of the garden; keep the silo's
+	## "→ Mission" buttons in step with them.
+	GuildManager.guild_data_changed.connect(_on_guild_data_changed)
 
 
 func teardown() -> void:
 	if GuildGarden.garden_updated.is_connected(_on_garden_updated):
 		GuildGarden.garden_updated.disconnect(_on_garden_updated)
+	if GuildManager.guild_data_changed.is_connected(_on_guild_data_changed):
+		GuildManager.guild_data_changed.disconnect(_on_guild_data_changed)
 	if is_instance_valid(_refresh_timer):
 		_refresh_timer.stop()
 	_cell_buttons.clear()
@@ -478,17 +483,21 @@ func _rebuild_silo() -> void:
 		row.add_child(info_lbl)
 
 		## Deposit-to-mission button (only if a matching mission is active).
-		var mission_key := "deposit_" + crop_id
-		if active_mission_keys.has(mission_key):
-			var mission_progress := 0
-			var mission_target   := 0
+		## A silo crop satisfies BOTH the crop-specific mission ("deposit_<crop>")
+		## and the generic produce mission ("deposit_produce") — the server fans a
+		## silo deposit out across every matching active mission (see
+		## _guild_deposit_keys_for_item), so mirror that here. The amount offered
+		## is the largest remaining need among them.
+		var specific_key := "deposit_" + crop_id
+		if active_mission_keys.has(specific_key) or active_mission_keys.has("deposit_produce"):
+			var needed := 0
 			for m in GuildManager.guild_missions:
-				if m is Dictionary and str(m.get("base_mission_key", "")) == mission_key \
-						and str(m.get("status", "")) == "active":
-					mission_progress = int(m.get("progress", 0))
-					mission_target   = int(m.get("target", 0))
-					break
-			var needed := maxi(mission_target - mission_progress, 0)
+				if not (m is Dictionary) or str(m.get("status", "")) != "active":
+					continue
+				var mkey := str(m.get("base_mission_key", ""))
+				if mkey != specific_key and mkey != "deposit_produce":
+					continue
+				needed = maxi(needed, int(m.get("target", 0)) - int(m.get("progress", 0)))
 			var can_deposit := mini(amount, needed)
 
 			if can_deposit > 0:
@@ -517,6 +526,11 @@ func _rebuild_silo() -> void:
 
 
 ## ── Signal handlers ──────────────────────────────────────────────
+
+func _on_guild_data_changed() -> void:
+	if is_instance_valid(_silo_container):
+		_rebuild_silo()
+
 
 func _on_garden_updated() -> void:
 	_refresh_grid_visuals()
