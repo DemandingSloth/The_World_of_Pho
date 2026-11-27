@@ -5316,6 +5316,18 @@ func get_chest_reward_multiplier() -> float:
 	return maxf(1.0, (float(level) + float(maxi(peak_level, level))) / 2.0)
 
 
+## Flat bonus added to a chest's prospector quantity (NOT multiplied): +1 per
+## CHEST_PROSPECTOR_BONUS_LEVEL_STEP levels of peak level, capped at
+## CHEST_PROSPECTOR_BONUS_MAX. With the defaults: Lv.20 = +1, 40 = +2, 60 = +3,
+## 80 = +4, 100 = +5. Uses peak_level so prestige can't lower it.
+const CHEST_PROSPECTOR_BONUS_LEVEL_STEP := 20
+const CHEST_PROSPECTOR_BONUS_MAX := 5
+
+func get_chest_prospector_bonus() -> int:
+	var lvl: int = maxi(peak_level, level)
+	return clampi(lvl / CHEST_PROSPECTOR_BONUS_LEVEL_STEP, 0, CHEST_PROSPECTOR_BONUS_MAX)
+
+
 ## Rounds a scaled amount; the fractional part is resolved randomly so small
 ## quantities still average out to the exact multiplier.
 func _scale_amount(amount: int, mult: float) -> int:
@@ -5327,8 +5339,9 @@ func _scale_amount(amount: int, mult: float) -> int:
 
 
 ## Scales every chest reward by get_chest_reward_multiplier().
-## Coins/seeds/prospectors/WonderStones have their amounts scaled; tiles and
-## gems (one entry per item) are repeated.
+## Coins/seeds/WonderStones/resources/saplings have their amounts scaled; tiles
+## and gems (one entry per item) are repeated. Prospectors are NOT scaled; they
+## get the flat get_chest_prospector_bonus() added instead.
 func _apply_chest_multiplier(rewards: Array) -> Array:
 	var mult: float = get_chest_reward_multiplier()
 	if mult <= 1.0:
@@ -5338,7 +5351,12 @@ func _apply_chest_multiplier(rewards: Array) -> Array:
 		if r is Dictionary and str(r.get("type", "")) == "coins":
 			r["amount"] = int(round(float(r["amount"]) * mult))
 			out.append(r)
-		elif r is Dictionary and (r.has("seed_type") or str(r.get("type", "")) in ["prospector", "material", "resource", "sapling"]):
+		elif r is Dictionary and str(r.get("type", "")) == "prospector":
+			## Prospectors are EXEMPT from the chest multiplier (too valuable to
+			## scale). They get a small ADDITIVE bonus instead (see below).
+			r["quantity"] = int(r.get("quantity", 1)) + get_chest_prospector_bonus()
+			out.append(r)
+		elif r is Dictionary and (r.has("seed_type") or str(r.get("type", "")) in ["material", "resource", "sapling"]):
 			r["quantity"] = _scale_amount(int(r.get("quantity", 1)), mult)
 			if int(r["quantity"]) > 0:
 				out.append(r)
