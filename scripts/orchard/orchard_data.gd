@@ -790,6 +790,8 @@ func _harvest_tree_silent(row: int, col: int) -> Dictionary:
 		## The Christmas Conifer yields PRESENTS (the save's assigned variant),
 		## not a normal fruit. This is the ONLY source of presents.
 		PlayerData.add_present(available, true)
+		if get_node_or_null("/root/Achievements") != null:
+			Achievements.record_presents_harvested(available)
 	else:
 		PlayerData.add_fruit(fruit_id, available, true)
 		## Mission progress: "harvest N <fruit> from the Orchard".

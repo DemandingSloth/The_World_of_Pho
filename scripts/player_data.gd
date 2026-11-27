@@ -2286,6 +2286,8 @@ func use_vessel(tier: int, adds: Dictionary) -> Dictionary:
 		wonder_vessels.erase(tier)
 	save_data()
 	data_changed.emit()
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_wondervessel_used(tier)
 	return {"ok": true, "granted": granted}
 
 
@@ -4568,6 +4570,8 @@ func claim_daily_bonus() -> int:
 	coins += reward
 	save_data()
 	emit_signal("data_changed")
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_daily_streak(daily_streak)
 	return reward
 
 

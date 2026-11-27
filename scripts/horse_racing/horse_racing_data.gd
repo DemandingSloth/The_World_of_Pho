@@ -737,6 +737,8 @@ func train(horse_id: String, kind: String, score: int) -> Dictionary:
 	_apply_remaining_from(res, horse_id, kind)
 	if not res.get("ok", false):
 		return _friendly(res)
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_horse_training()
 
 	await refresh()
 	await refresh_training()
@@ -953,6 +955,8 @@ func register(race_id: String, horse_id: String) -> Dictionary:
 	})
 	if not res.get("ok", false):
 		return _friendly(res)
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_horse_race_entered()
 	await refresh_races()
 	return _friendly(res)
 
@@ -1184,6 +1188,8 @@ func place_bet(race_id: String, lane: int, currency: String, stake: int) -> Dict
 		PlayerData.coins -= stake
 		PlayerData.save_data()
 		PlayerData.data_changed.emit()
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_horse_bet_placed()
 	await refresh_races()
 	return _friendly(res)
 
@@ -1295,6 +1301,8 @@ func train_paddock(horse_id: String, kind: String, score: int) -> Dictionary:
 	_apply_remaining_from(res, horse_id, kind)
 	if not res.get("ok", false):
 		return _friendly(res)
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_horse_training()
 	await refresh()            ## the owner's horse (possibly ours) changed
 	await refresh_paddock()
 	await refresh_training()
@@ -1429,6 +1437,9 @@ func _apply_cup_prizes(prizes: Array) -> int:
 		credited += amt
 		_applied_prize_ids[pid] = true
 		dirty = true
+		## Achievement: a newly-claimed 1st-place Cup prize counts as a race win.
+		if int(p.get("finish_place", 0)) == 1 and get_node_or_null("/root/Achievements") != null:
+			Achievements.record_horse_race_win()
 	if dirty:
 		_save_applied_bets()
 		PlayerData.save_data()

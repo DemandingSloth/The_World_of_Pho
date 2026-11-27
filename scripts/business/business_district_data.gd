@@ -281,6 +281,9 @@ func deposit(shop_id: String, item_key: String, qty: int) -> Dictionary:
 	## Mission tracking: depositing items (Business District category mission).
 	if get_node_or_null("/root/MissionBoard") != null:
 		MissionBoard.on_business_deposit(amount)
+	## Achievements: total deposited + shops maxed.
+	if get_node_or_null("/root/Achievements") != null:
+		Achievements.record_business_progress()
 	return { "ok": true, "deposited": amount }
 
 ## Aggregate deposit total for a shop (drives level math).

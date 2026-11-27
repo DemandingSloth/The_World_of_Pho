@@ -30,6 +30,39 @@ texture_margin_bottom = 3.0
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.55, 0.6, 0.55, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber_hl"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.7, 0.78, 0.7, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.08, 0.08, 0.1, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_itemlist"]
 content_margin_left = 6.0
 content_margin_top = 10.0
@@ -73,39 +106,6 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.08, 0.08, 0.1, 0.6)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.55, 0.6, 0.55, 0.9)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber_hl"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.7, 0.78, 0.7, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
 [resource]
 Button/colors/font_color = Color(0.1, 0.2, 0.1, 1)
 Button/colors/font_disabled_color = Color(0.4, 0.5, 0.4, 1)
@@ -117,26 +117,11 @@ Button/styles/focus = SubResource("StyleBoxTexture_btn_normal")
 Button/styles/hover = SubResource("StyleBoxTexture_btn_normal")
 Button/styles/normal = SubResource("StyleBoxTexture_btn_normal")
 Button/styles/pressed = SubResource("StyleBoxTexture_btn_pressed")
-ItemList/colors/font_color = Color(0.15, 0.15, 0.1, 1)
-ItemList/font_sizes/font_size = 13
-ItemList/styles/panel = SubResource("StyleBoxTexture_itemlist")
-Label/colors/font_color = Color(0.15, 0.12, 0.08, 1)
-Label/font_sizes/font_size = 13
-Panel/styles/panel = SubResource("StyleBoxTexture_panel")
-PanelContainer/styles/panel = SubResource("StyleBoxTexture_panel")
-TooltipLabel/colors/font_color = Color(0.9, 0.95, 0.9, 1)
-TooltipLabel/font_sizes/font_size = 13
-TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")
-VScrollBar/styles/scroll = SubResource("StyleBoxFlat_scroll")
-VScrollBar/styles/scroll_focus = SubResource("StyleBoxFlat_scroll")
-VScrollBar/styles/grabber = SubResource("StyleBoxFlat_grabber")
-VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_grabber_hl")
-VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_grabber_hl")
-HScrollBar/styles/scroll = SubResource("StyleBoxFlat_scroll")
-HScrollBar/styles/scroll_focus = SubResource("StyleBoxFlat_scroll")
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_grabber")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_grabber_hl")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_grabber_hl")
+HScrollBar/styles/scroll = SubResource("StyleBoxFlat_scroll")
+HScrollBar/styles/scroll_focus = SubResource("StyleBoxFlat_scroll")
 HudGoldLabel/base_type = &"Label"
 HudGoldLabel/colors/font_color = Color(1, 0.86, 0.35, 1)
 HudGoldLabel/colors/font_outline_color = Color(0.06, 0.06, 0.09, 0.9)
@@ -149,3 +134,18 @@ HudMutedLabel/base_type = &"Label"
 HudMutedLabel/colors/font_color = Color(0.84, 0.86, 0.82, 1)
 HudMutedLabel/colors/font_outline_color = Color(0.06, 0.06, 0.09, 0.85)
 HudMutedLabel/constants/outline_size = 2
+ItemList/colors/font_color = Color(0.15, 0.15, 0.1, 1)
+ItemList/font_sizes/font_size = 13
+ItemList/styles/panel = SubResource("StyleBoxTexture_itemlist")
+Label/colors/font_color = Color(0.15, 0.12, 0.08, 1)
+Label/font_sizes/font_size = 13
+Panel/styles/panel = SubResource("StyleBoxTexture_panel")
+PanelContainer/styles/panel = SubResource("StyleBoxTexture_panel")
+TooltipLabel/colors/font_color = Color(0.9, 0.95, 0.9, 1)
+TooltipLabel/font_sizes/font_size = 13
+TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")
+VScrollBar/styles/grabber = SubResource("StyleBoxFlat_grabber")
+VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_grabber_hl")
+VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_grabber_hl")
+VScrollBar/styles/scroll = SubResource("StyleBoxFlat_scroll")
+VScrollBar/styles/scroll_focus = SubResource("StyleBoxFlat_scroll")

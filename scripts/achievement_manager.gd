@@ -478,6 +478,92 @@ const ACHIEVEMENTS: Dictionary = {
 		"type": "tiered",
 		"tier_thresholds": [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
 	},
+	## ── Daily Bonus Streak ──────────────────────────────────────
+	## Tracks the BEST consecutive-day streak ever reached (a broken streak
+	## never lowers it). 30d, 90d, 180d, 1y, 1.5y, 2y, 3y, 4y, 5y, 10y.
+	"daily_streak": {
+		"title": "Creature of Habit",
+		"description": "Claim the daily bonus %d days in a row",
+		"type": "tiered",
+		"tier_thresholds": [30, 90, 180, 365, 545, 730, 1095, 1460, 1825, 3650],
+	},
+	## ── Horse Racing ────────────────────────────────────────────
+	"horse_races_entered": {
+		"title": "Race Day Regular",
+		"description": "Enter %d horse races",
+		"type": "tiered",
+		"tier_thresholds": [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500],
+	},
+	## Counted when a Cup prize for a 1st-place finish is claimed.
+	"horse_race_wins": {
+		"title": "Winner's Circle",
+		"description": "Win %d cup races",
+		"type": "tiered",
+		"tier_thresholds": [1, 3, 5, 10, 25, 50, 100, 250, 500, 1000],
+	},
+	"horse_bets_placed": {
+		"title": "High Roller",
+		"description": "Place %d bets on horse races",
+		"type": "tiered",
+		"tier_thresholds": [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500],
+	},
+	## ── Horse Training ──────────────────────────────────────────
+	## Stable and paddock sessions both count.
+	"horse_training": {
+		"title": "Horse Whisperer",
+		"description": "Complete %d horse training sessions",
+		"type": "tiered",
+		"tier_thresholds": [1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
+	},
+	## ── Business District ───────────────────────────────────────
+	## Progress = total items deposited across every shop (a permanent sink).
+	"business_deposits": {
+		"title": "Silent Partner",
+		"description": "Deposit %d items into Business District shops",
+		"type": "tiered",
+		"tier_thresholds": [100_000, 1_000_000, 10_000_000, 50_000_000, 250_000_000, 1_000_000_000, 2_500_000_000, 5_000_000_000, 7_500_000_000, 10_000_000_000],
+	},
+	## Progress = number of shops currently at max level (13 shops exist).
+	"business_maxed": {
+		"title": "Business Mogul",
+		"description": "Max out %d Business District shops",
+		"type": "tiered",
+		"tier_thresholds": [1, 2, 3, 4, 5, 6, 8, 10, 12, 13],
+	},
+	## ── Present Trees (Christmas Conifer) ───────────────────────
+	"orchard_trees_conifer": {
+		"title": "Conifer Planter",
+		"description": "Plant %d Christmas Conifers",
+		"type": "tiered",
+		"tier_thresholds": [5, 15, 30, 60, 100, 150, 200, 225, 240, 250],
+	},
+	"orchard_full_conifer": {
+		"title": "Winter Wonderland",
+		"description": "Fill the full 16×16 orchard with only Christmas Conifers",
+		"type": "one_time",
+		"chest_level": 9,
+	},
+	## Presents harvested from Christmas Conifers (the only present source
+	## besides drops), counted by the number of presents collected.
+	"presents_harvested": {
+		"title": "Santa's Helper",
+		"description": "Harvest %d presents from Christmas Conifers",
+		"type": "tiered",
+		"tier_thresholds": [10, 100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
+	},
+	## ── WonderVessels ───────────────────────────────────────────
+	"wondervessel_uses": {
+		"title": "Vessel Virtuoso",
+		"description": "Use %d WonderVessels",
+		"type": "tiered",
+		"tier_thresholds": [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500],
+	},
+	"wondervessel_top_tier": {
+		"title": "Wonder Maxed",
+		"description": "Use a top-tier (Tier 10) WonderVessel",
+		"type": "one_time",
+		"chest_level": 8,
+	},
 }
 
 ## Player levels that grant a milestone reward, and how many top-tier (index 9,
@@ -527,6 +613,10 @@ func _ready() -> void:
 	call_deferred("_connect_level_milestones")
 	## Catch up the "all 8 presents" achievement for saves that already hold them.
 	call_deferred("record_presents_checked")
+	## Catch up Business District progress from existing deposits.
+	call_deferred("record_business_progress")
+	## Catch up the daily-streak achievement from a streak already in progress.
+	call_deferred("_sync_daily_streak")
 
 
 ## Connects to PlayerData's level-up signal so reaching a milestone level (every
@@ -718,7 +808,7 @@ func _show_chest_popup(achievement_id: String, level: int, chest_level: int) -> 
 ##   coconut orchard awarding 1 billion coins.
 func _orchard_coin_reward(achievement_id: String, level: int) -> int:
 	match achievement_id:
-		"orchard_full_coconut":
+		"orchard_full_coconut", "orchard_full_conifer":
 			return 1_000_000_000
 		"orchard_full":
 			return 500_000_000
@@ -951,6 +1041,7 @@ const ORCHARD_PLANT_TREE_ACHIEVEMENT_IDS: Array[String] = [
 	"orchard_trees_apple",
 	"orchard_trees_banana",
 	"orchard_trees_coconut",
+	"orchard_trees_conifer",  ## TreeType.WINTER_CONIFER (Christmas Conifer)
 ]
 
 ## Map TreeType index to single-tree full-orchard achievement ID.
@@ -960,6 +1051,7 @@ const ORCHARD_FULL_TREE_ACHIEVEMENT_IDS: Array[String] = [
 	"orchard_full_apple",
 	"orchard_full_banana",
 	"orchard_full_coconut",
+	"orchard_full_conifer",   ## TreeType.WINTER_CONIFER (Christmas Conifer)
 ]
 
 ## Call after planting a tree in the orchard.
@@ -979,6 +1071,90 @@ func record_orchard_full() -> void:
 func record_orchard_full_single_tree(tree_type: int) -> void:
 	if tree_type >= 0 and tree_type < ORCHARD_FULL_TREE_ACHIEVEMENT_IDS.size():
 		_try_unlock_one_time(ORCHARD_FULL_TREE_ACHIEVEMENT_IDS[tree_type])
+	save_data()
+
+
+## ── Daily streak ───────────────────────────────────────────────
+
+## Call after a daily bonus claim (and on load) with the current streak length.
+## Keeps the highest streak ever seen, so a later reset can't lower progress.
+func record_daily_streak(streak: int) -> void:
+	_update_streak_progress("daily_streak", streak)
+	save_data()
+
+
+## Catch-up on load for players who already have a running streak.
+func _sync_daily_streak() -> void:
+	if get_node_or_null("/root/PlayerData") == null:
+		return
+	record_daily_streak(PlayerData.daily_streak)
+
+
+## ── Horse racing / training ────────────────────────────────────
+
+## Call after a horse is successfully registered into a race.
+func record_horse_race_entered() -> void:
+	_increment_progress("horse_races_entered")
+	save_data()
+
+
+## Call once per 1st-place Cup prize that is newly claimed.
+func record_horse_race_win() -> void:
+	_increment_progress("horse_race_wins")
+	save_data()
+
+
+## Call after a bet is successfully placed.
+func record_horse_bet_placed() -> void:
+	_increment_progress("horse_bets_placed")
+	save_data()
+
+
+## Call after a stable or paddock training session succeeds.
+func record_horse_training() -> void:
+	_increment_progress("horse_training")
+	save_data()
+
+
+## ── Business District ──────────────────────────────────────────
+
+## Recomputes both Business District achievements from the shop state: total
+## items deposited across all shops, and how many shops are at max level. Safe to
+## call any time (after a deposit, or on load to catch up existing saves). Uses
+## max() so progress can never regress.
+func record_business_progress() -> void:
+	if get_node_or_null("/root/BusinessDistrict") == null:
+		return
+	var total_deposited := 0
+	var maxed := 0
+	for shop in BusinessDistrict.SHOPS:
+		var sid := str(shop.get("id", ""))
+		total_deposited += BusinessDistrict.get_deposit_count(sid)
+		if BusinessDistrict.is_maxed(sid):
+			maxed += 1
+	_set_progress_max("business_deposits", total_deposited)
+	_set_progress_max("business_maxed", maxed)
+	save_data()
+
+
+## ── Present trees ──────────────────────────────────────────────
+
+## Call after presents are harvested from a Christmas Conifer. count = presents
+## collected in that harvest.
+func record_presents_harvested(count: int) -> void:
+	if count <= 0:
+		return
+	_add_progress("presents_harvested", count)
+	save_data()
+
+
+## ── WonderVessels ──────────────────────────────────────────────
+
+## Call after a WonderVessel is successfully used. tier = the vessel's tier.
+func record_wondervessel_used(tier: int) -> void:
+	_increment_progress("wondervessel_uses")
+	if get_node_or_null("/root/PlayerData") != null and tier >= PlayerData.WONDERVESSEL_DEFS.size():
+		_try_unlock_one_time("wondervessel_top_tier")
 	save_data()
 
 
@@ -1256,6 +1432,28 @@ func _increment_progress(id: String) -> void:
 		_progress[id] = { "progress": 0, "level": 0 }
 
 	_progress[id]["progress"] += 1
+	_check_tiered_levelup(id)
+
+
+## Adds `amount` to a tiered achievement's progress and checks for level-ups.
+func _add_progress(id: String, amount: int) -> void:
+	if amount <= 0:
+		return
+	if not _progress.has(id):
+		_progress[id] = { "progress": 0, "level": 0 }
+
+	_progress[id]["progress"] += amount
+	_check_tiered_levelup(id)
+
+
+## Raises a tiered achievement's progress to `value` if higher (never lowers it)
+## and checks for level-ups. For counters derived from current game state.
+func _set_progress_max(id: String, value: int) -> void:
+	if not _progress.has(id):
+		_progress[id] = { "progress": 0, "level": 0 }
+
+	if value > int(_progress[id]["progress"]):
+		_progress[id]["progress"] = value
 	_check_tiered_levelup(id)
 
 
