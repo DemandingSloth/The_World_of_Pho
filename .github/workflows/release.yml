@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir -p build/windows
           godot --headless --export-release "Windows Desktop" build/windows/World_of_Pho.exe
+          ls -la build/windows
 
       - name: Export Web
         run: |
@@ -55,8 +56,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-and-web-builds
+          if-no-files-found: error
           path: |
-            build/windows/World_of_Pho.exe
+            build/windows/*.exe
             World_of_Pho-web.zip
 
   export-android:
@@ -140,6 +142,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-builds
+          if-no-files-found: error
           path: |
             build/android/The_World_of_Pho.apk
             build/android/The_World_of_Pho.aab
