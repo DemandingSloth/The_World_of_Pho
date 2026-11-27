@@ -519,8 +519,6 @@ func _apply_cell_visual(btn: Button, row: int, col: int) -> void:
 
 		var now := TrustedClock.now()
 		var remaining := maxf(0.0, float(cell.get("decay_end_time", 0.0)) - now)
-		var hours := int(remaining / 3600.0)
-		var mins := int(fmod(remaining, 3600.0) / 60.0)
 
 		var timer_lbl: Label = btn.get_node_or_null("TimerLabel") as Label
 		if timer_lbl == null:
@@ -531,11 +529,11 @@ func _apply_cell_visual(btn: Button, row: int, col: int) -> void:
 			timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			timer_lbl.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 			btn.add_child(timer_lbl)
-		var timer_text := "%dh %dm" % [hours, mins]
+		var timer_text := FormatUtils.format_duration(remaining)
 		if timer_lbl.text != timer_text:
 			timer_lbl.text = timer_text
 
-		var stump_tip := "Decaying Stump — %dh %dm left before soil clears" % [hours, mins]
+		var stump_tip := "Decaying Stump — %s left before soil clears" % timer_text
 		if btn.tooltip_text != stump_tip:
 			btn.tooltip_text = stump_tip
 		return

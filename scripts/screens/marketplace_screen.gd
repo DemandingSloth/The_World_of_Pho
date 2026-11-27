@@ -47,6 +47,7 @@ var _seeds_sort_dropdown: OptionButton = null
 var _items_sort_dropdown: OptionButton = null
 var _gems_sort_dropdown: OptionButton = null
 var _current_tab: String = "tiles"
+var _refresh_timer: Timer = null
 
 
 func enter(params: Dictionary = {}) -> void:
@@ -77,8 +78,19 @@ func enter(params: Dictionary = {}) -> void:
 	_build_ui()
 	_show_tab("tiles")
 
+	# Tick once per second so the top-right restock countdown updates live.
+	_refresh_timer = Timer.new()
+	_refresh_timer.wait_time = 1.0
+	_refresh_timer.one_shot = false
+	_refresh_timer.timeout.connect(_on_refresh_tick)
+	add_child(_refresh_timer)
+	_refresh_timer.start()
+
 
 func exit() -> void:
+	if _refresh_timer != null:
+		_refresh_timer.stop()
+		_refresh_timer = null
 	# Disconnect signals (Req 1.6)
 	if PlayerData.data_changed.is_connected(_on_data_changed):
 		PlayerData.data_changed.disconnect(_on_data_changed)
@@ -683,18 +695,7 @@ func _rebuild_seed_shop() -> void:
 		return
 
 	# Update info label
-	var info_label = _seeds_content.get_node_or_null("SeedInfoLabel") as Label
-	if info_label:
-		var refresh_secs := Garden.get_seed_shop_refresh_remaining()
-		var refresh_hrs := int(refresh_secs / 3600)
-		var refresh_mins := int(fmod(refresh_secs, 3600) / 60)
-		## Seeds/saplings are uncapped — show the count only (no "/ max").
-		if Garden.has_seed_cap():
-			info_label.text = "Seeds/Saplings: %d/%d  |  Restock: %dh %dm" % [
-				Garden.get_total_seeds_and_saplings(), Garden.MAX_SEED_STORAGE, refresh_hrs, refresh_mins]
-		else:
-			info_label.text = "Seeds/Saplings: %d  |  Restock: %dh %dm" % [
-				Garden.get_total_seeds_and_saplings(), refresh_hrs, refresh_mins]
+	_refresh_seed_info_label()
 
 	for child in shop_grid.get_children():
 		child.queue_free()
@@ -752,8 +753,7 @@ func _rebuild_seed_shop() -> void:
 		info.add_child(name_lbl)
 		var detail_lbl := Label.new()
 		var effective_secs: float = Garden.get_effective_harvest_time(i)
-		var time_mins := int(effective_secs / 60)
-		var time_text := "%dm" % time_mins if time_mins < 60 else "%dh %dm" % [time_mins / 60, time_mins % 60]
+		var time_text := FormatUtils.format_duration(effective_secs)
 		## Crops are sold (not auto-harvested) — show the per-crop MARKETPLACE sell
 		## value including the garden-profit prestige, so players see what one
 		## harvested crop will fetch.
@@ -990,12 +990,7 @@ func _rebuild_tool_shop() -> void:
 		return
 
 	# Update info label
-	var info_label = _tools_content.get_node_or_null("ToolInfoLabel") as Label
-	if info_label:
-		var refresh_secs := PlayerData.get_tool_shop_refresh_remaining()
-		var refresh_hrs := int(refresh_secs / 3600)
-		var refresh_mins := int(fmod(refresh_secs, 3600) / 60)
-		info_label.text = "Tools  |  Restock: %dh %dm" % [refresh_hrs, refresh_mins]
+	_refresh_tool_info_label()
 
 	for child in tool_grid.get_children():
 		child.queue_free()
@@ -2440,15 +2435,39 @@ func _reconcile_tokens() -> void:
 				str(res.get("error", "offline"))]
 
 
+func _on_refresh_tick() -> void:
+	_refresh_coins_label()
+
+
+func _refresh_seed_info_label() -> void:
+	if _seeds_content == null:
+		return
+	var info_label := _seeds_content.get_node_or_null("SeedInfoLabel") as Label
+	if info_label == null:
+		return
+	if Garden.has_seed_cap():
+		info_label.text = "Seeds/Saplings: %d/%d" % [
+			Garden.get_total_seeds_and_saplings(), Garden.MAX_SEED_STORAGE]
+	else:
+		info_label.text = "Seeds/Saplings: %d" % Garden.get_total_seeds_and_saplings()
+
+
+func _refresh_tool_info_label() -> void:
+	if _tools_content == null:
+		return
+	var info_label := _tools_content.get_node_or_null("ToolInfoLabel") as Label
+	if info_label == null:
+		return
+	info_label.text = "Tools"
+
+
 func _refresh_coins_label() -> void:
 	if _coins_label == null:
 		return
 	var refresh_secs := PlayerData.get_shop_refresh_remaining()
-	var refresh_hrs := int(refresh_secs / 3600)
-	var refresh_mins := int(fmod(refresh_secs, 3600) / 60)
-	_coins_label.text = "Coins: %s | Inv: %d/%d\nRestock: %dh %dm" % [
+	_coins_label.text = "Coins: %s | Inv: %d/%d\nRestock: %s" % [
 		PlayerData.format_number(PlayerData.coins), PlayerData.get_inventory_size(), PlayerData.MAX_INVENTORY,
-		refresh_hrs, refresh_mins]
+		FormatUtils.format_duration(refresh_secs)]
 
 
 func _on_data_changed() -> void:

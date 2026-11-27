@@ -501,17 +501,14 @@ func _deposit_error(code: String) -> String:
 		_: return "Deposit failed."
 
 
-## Formats seconds as "Xd Yh" / "Xh Ym" / "Xm".
+## Formats seconds as "Xd Yh" or delegates sub-day durations to FormatUtils.
 func _fmt_duration(secs: float) -> String:
 	var s := int(secs)
 	var days := s / 86400
-	var hours := (s % 86400) / 3600
-	var mins := (s % 3600) / 60
 	if days > 0:
+		var hours := (s % 86400) / 3600
 		return "%dd %dh" % [days, hours]
-	if hours > 0:
-		return "%dh %dm" % [hours, mins]
-	return "%dm" % maxi(mins, 1)
+	return FormatUtils.format_duration(secs)
 
 
 func _safe_load(path: String) -> Texture2D:

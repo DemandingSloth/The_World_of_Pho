@@ -12,31 +12,9 @@ const DEFAULT_LEVEL := 1
 
 ## ── Number Formatting ────────────────────────────────────────────
 ## Formats a Number amount for display. Accepts both int and float.
-## Examples: 1500 -> "1,500", 25000 -> "25K", 1500000 -> "1.5M"
+## Examples: 1500 -> "1,500", 250000 -> "250K", 1500000 -> "1.5M"
 static func format_number(amount: Variant) -> String:
-	var numeric_val: float = float(amount)
-	var negative: bool = numeric_val < 0.0
-	var abs_amount: float = abs(numeric_val)
-	var result: String
-
-	if abs_amount >= 1_000_000_000_000.0:
-		var val: float = abs_amount / 1_000_000_000_000.0
-		result = _format_abbreviated(val, "T")
-	elif abs_amount >= 1_000_000_000.0:
-		var val: float = abs_amount / 1_000_000_000.0
-		result = _format_abbreviated(val, "B")
-	elif abs_amount >= 1_000_000.0:
-		var val: float = abs_amount / 1_000_000.0
-		result = _format_abbreviated(val, "M")
-	elif abs_amount >= 100_000.0:
-		var val: float = abs_amount / 1_000.0
-		result = _format_abbreviated(val, "K")
-	else:
-		result = _add_commas(int(abs_amount))
-
-	if negative:
-		return "-" + result
-	return result
+	return FormatUtils.format_number(amount)
 
 
 ## Formats a coin amount for display, appending a "c" suffix ONLY when the number
@@ -44,33 +22,7 @@ static func format_number(amount: Variant) -> String:
 ## adding "c" (e.g. "250Kc") reads as confusing — those are returned as-is.
 ## Examples: 1500 -> "1,500c", 250000 -> "250K", 1500000 -> "1.5M".
 static func format_coins(amount: Variant) -> String:
-	var s := format_number(amount)
-	## If it ends in an abbreviation suffix, don't append "c".
-	var last := s.substr(s.length() - 1) if s.length() > 0 else ""
-	if last in ["K", "M", "B", "T"]:
-		return s
-	return s + "c"
-
-
-## Helper: format abbreviated value with 1 decimal place if under 100, otherwise whole number.
-static func _format_abbreviated(val: float, suffix: String) -> String:
-	if val < 100.0:
-		return "%.1f%s" % [val, suffix]
-	else:
-		return "%d%s" % [int(val), suffix]
-
-
-## Helper: add commas to numbers under 100K for readability.
-static func _add_commas(amount: int) -> String:
-	var s: String = str(amount)
-	var result: String = ""
-	var count: int = 0
-	for i in range(s.length() - 1, -1, -1):
-		if count > 0 and count % 3 == 0:
-			result = "," + result
-		result = s[i] + result
-		count += 1
-	return result
+	return FormatUtils.format_coins(amount)
 	
 ## Coin rewards per difficulty
 const REWARD_EASY   := 50

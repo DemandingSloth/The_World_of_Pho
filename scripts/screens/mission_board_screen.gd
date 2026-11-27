@@ -480,10 +480,8 @@ func _refresh_slot(slot: int) -> void:
 	else:
 		## Show time remaining until expiry
 		var secs := MissionBoard.get_time_remaining(slot)
-		var hrs := int(secs / 3600)
-		var mins := int(fmod(secs, 3600) / 60)
 		var time_lbl := Label.new()
-		time_lbl.text = "Expires in: %dh %dm" % [hrs, mins]
+		time_lbl.text = "Expires in: %s" % FormatUtils.format_duration(secs)
 		time_lbl.add_theme_font_size_override("font_size", 10)
 		time_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		inner.add_child(time_lbl)
@@ -521,11 +519,9 @@ func _refresh_slot(slot: int) -> void:
 			## Already accepted — show accepted timestamp and Go button
 			var accepted_at: float = float(m.get("accepted_at", 0.0))
 			if accepted_at > 0.0:
-				var elapsed_secs := int(TrustedClock.now() - accepted_at)
-				var e_hrs := elapsed_secs / 3600
-				var e_mins := (elapsed_secs % 3600) / 60
+				var elapsed_secs := TrustedClock.now() - accepted_at
 				var accepted_lbl := Label.new()
-				accepted_lbl.text = "⏱ Accepted %dh %dm ago" % [e_hrs, e_mins]
+				accepted_lbl.text = "⏱ Accepted %s ago" % FormatUtils.format_duration(elapsed_secs)
 				accepted_lbl.add_theme_font_size_override("font_size", 10)
 				accepted_lbl.add_theme_color_override("font_color", Color(0.5, 0.9, 0.6))
 				inner.add_child(accepted_lbl)

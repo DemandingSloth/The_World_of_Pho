@@ -421,11 +421,8 @@ func _apply_cell_visual(btn: Button, row: int, col: int) -> void:
 		btn.tooltip_text = "%s — Ready! Tap to harvest." % def.get("name", "")
 	else:
 		var progress := GuildGarden.get_growth_progress(row, col)
-		var remaining := int(GuildGarden.HARVEST_TIMES[plant_type] * (1.0 - progress))
-		var hrs  := remaining / 3600
-		var mins := (remaining % 3600) / 60
-		var secs := remaining % 60
-		btn.tooltip_text = "%s — %dh %dm %ds" % [def.get("name", ""), hrs, mins, secs]
+		var remaining := GuildGarden.HARVEST_TIMES[plant_type] * (1.0 - progress)
+		btn.tooltip_text = "%s — %s" % [def.get("name", ""), FormatUtils.format_countdown(remaining)]
 
 	## Plant sprite
 	if sprite:

@@ -774,9 +774,7 @@ func training_reset_text() -> String:
 	var secs := int(at - TrustedClock.now())
 	if secs <= 0:
 		return "resets now"
-	var h := secs / 3600
-	var m := (secs % 3600) / 60
-	return "resets in %dh %dm" % [h, m] if h > 0 else "resets in %dm" % maxi(m, 1)
+	return "resets in %s" % FormatUtils.format_duration(float(secs))
 
 
 ## The equipped-jewelry training multiplier for a kind (>= 1.0), via JewelryBonus.

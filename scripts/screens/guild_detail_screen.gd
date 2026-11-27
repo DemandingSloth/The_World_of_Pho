@@ -453,9 +453,7 @@ func _rebuild_home() -> void:
 	else:
 		var pat := float(GuildManager._local_member_info.get("perks_active_at", 0.0))
 		var remaining := pat - TrustedClock.now()
-		var hrs := int(remaining / 3600.0)
-		var mins := int(fmod(remaining, 3600.0) / 60.0)
-		_home_perks_status.text = "⏳ Cooldown: %dh %dm" % [hrs, mins]
+		_home_perks_status.text = "⏳ Cooldown: %s" % FormatUtils.format_duration(remaining)
 		_home_perks_status.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 
 	var active_count := 0
@@ -641,10 +639,8 @@ func _make_mission_card(m: Dictionary) -> Control:
 	var now_ts     := TrustedClock.now()
 	var remaining  := expires_at - now_ts
 	if remaining > 0:
-		var hrs  := int(remaining / 3600.0)
-		var mins := int(fmod(remaining, 3600.0) / 60.0)
 		var timer_lbl := Label.new()
-		timer_lbl.text = "⌛ Expires in: %dh %dm" % [hrs, mins]
+		timer_lbl.text = "⌛ Expires in: %s" % FormatUtils.format_duration(remaining)
 		timer_lbl.add_theme_font_size_override("font_size", 10)
 		timer_lbl.add_theme_color_override("font_color",
 			Color(0.7, 0.1, 0.0) if remaining < 3600.0 else Color(0.15, 0.15, 0.15))

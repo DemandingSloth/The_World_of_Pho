@@ -11,16 +11,12 @@ extends Node
 ##     change when the user edits the system date.
 ##   • Online: the anchor is the SERVER's time (get_server_time, migration 110),
 ##     re-fetched at startup and every time the app returns to the foreground.
-##   • Before the first server answer, the clock stays at the last time we
-##     trusted (the persisted high-water mark), so start-up catch-up (offline
-##     prospector gems, passive XP, ...) waits until time is verified instead
-##     of using a possibly-fake phone date. If the server can't be reached
-##     (offline) we fall back to the phone's clock — but never earlier than the
-##     high-water mark, so rolling the clock BACK is caught and simply freezes
-##     time until real time catches up.
-##   • Known gap (accepted): a player who is offline the whole time can still
-##     move the date FORWARD. Nothing shared (tokens/market/guilds) is affected
-##     because those are server-authoritative.
+##   • Offline fallback: if the server can't be reached when Supabase is
+##     configured, we do NOT trust the device clock to advance time across
+##     restarts or background sleep — time holds at the high-water mark (and
+##     still ticks in real time while the app is open via get_ticks_msec)
+##     until the server is reached again. Once back online, sync_now()
+##     immediately catches up to the full real elapsed server time with no cap.
 
 const SAVE_PATH := "user://trusted_clock.cfg"
 ## Clock differences under this many seconds are treated as normal drift.
@@ -67,13 +63,15 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN:
-			## The monotonic counter may not advance while the phone sleeps, so
-			## on return: if the phone's clock moved well past ours, take it
-			## provisionally (never going backwards) and verify with the server
-			## immediately. Otherwise just re-verify now and then.
-			if _reanchor_from_device():
-				sync_now()
-			elif Time.get_ticks_msec() - _last_sync_ticks > 30_000:
+			## Never provisionally jump forward to the device clock before the
+			## server verifies it. Trigger sync_now() so online players catch up
+			## to the full real elapsed time, while offline players stay anchored
+			## to monotonic ticks / high-water mark until reconnected.
+			var device := Time.get_unix_time_from_system()
+			var current := now()
+			if device < current - TOLERANCE_SECS:
+				clock_tampered.emit(device - current)
+			if device > current + 60.0 or Time.get_ticks_msec() - _last_sync_ticks > 30_000:
 				sync_now()
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, \
 		NOTIFICATION_WM_CLOSE_REQUEST:
@@ -112,21 +110,20 @@ func sync_now() -> void:
 	_syncing = true
 	var timeout := get_tree().create_timer(SYNC_TIMEOUT_SECS)
 	timeout.timeout.connect(func():
-		if _syncing and not _ready_done:
+		if _syncing:
 			_use_fallback())
 	var sent_ticks := Time.get_ticks_msec()
 	var res: Dictionary = await SupabaseClient.request_json("POST", "/rest/v1/rpc/get_server_time", {})
 	_syncing = false
 	var data = res.get("data", null)
 	if not res.get("ok", false) or not (data is Dictionary) or not data.has("now"):
-		if not _ready_done:
-			_use_fallback()
+		_use_fallback()
 		return
 	## Compensate for half the round trip.
 	var rtt := float(Time.get_ticks_msec() - sent_ticks) / 1000.0
 	var server_now := float(data["now"]) + rtt * 0.5
 	var device := Time.get_unix_time_from_system()
-	if device - server_now > TOLERANCE_SECS:
+	if absf(device - server_now) > TOLERANCE_SECS:
 		clock_tampered.emit(device - server_now)
 	_set_anchor(server_now)
 	_synced = true
@@ -161,30 +158,26 @@ func _set_anchor(epoch: float) -> void:
 	_anchor_ticks = Time.get_ticks_msec()
 
 
-## Offline fallback: the phone's clock, but never earlier than the high-water
-## mark (a rollback freezes time instead of rewinding it).
+## Offline fallback:
+##   • When Supabase is configured (normal builds), do NOT trust the device
+##     clock to jump forward while offline — hold at maxf(_high_water, now())
+##     so monotonic ticks still advance while the app is open, and changing the
+##     system date/time grants 0 fake progress.
+##   • When Supabase is not configured (e.g. local/test builds without backend),
+##     fall back to the device clock clamped >= _high_water.
 func _use_fallback() -> void:
-	if _synced:
-		_mark_ready()
-		return
-	var device := Time.get_unix_time_from_system()
-	if device < _high_water - TOLERANCE_SECS:
-		clock_tampered.emit(device - _high_water)
-	_set_anchor(maxf(device, now()))
-	_mark_ready()
-
-
-## Returns true if it re-anchored to the phone's clock (a real gap, e.g. the
-## phone slept) — the caller must then verify with the server.
-func _reanchor_from_device() -> bool:
+	_synced = false
 	var device := Time.get_unix_time_from_system()
 	var current := now()
-	if device > current + 60.0:
-		_set_anchor(device)  ## provisional; the server sync corrects it
-		return true
-	if device < current - TOLERANCE_SECS:
-		clock_tampered.emit(device - current)
-	return false
+	var has_backend := get_node_or_null("/root/SupabaseClient") != null and SupabaseClient.is_configured()
+	if device < _high_water - TOLERANCE_SECS:
+		clock_tampered.emit(device - _high_water)
+	if has_backend:
+		_set_anchor(maxf(_high_water, current))
+	else:
+		_set_anchor(maxf(device, current))
+	_persist()
+	_mark_ready()
 
 
 func _mark_ready() -> void:

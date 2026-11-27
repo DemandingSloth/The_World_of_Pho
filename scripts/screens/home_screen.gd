@@ -888,10 +888,8 @@ func _update_daily_bonus_ui() -> void:
 		daily_btn.disabled = true
 		daily_btn.modulate = Color(0.5, 0.5, 0.5)
 		var cooldown := PlayerData.get_daily_cooldown_remaining()
-		var hrs := int(cooldown / 3600)
-		var mins := int(fmod(cooldown, 3600) / 60)
-		info_label.text = "Daily Bonus: claimed!\nStreak: %d days\nNext in: %dh %dm" % [
-			PlayerData.get_daily_streak(), hrs, mins]
+		info_label.text = "Daily Bonus: claimed!\nStreak: %d days\nNext in: %s" % [
+			PlayerData.get_daily_streak(), FormatUtils.format_duration(cooldown)]
 
 
 func _on_claim_daily_bonus() -> void:

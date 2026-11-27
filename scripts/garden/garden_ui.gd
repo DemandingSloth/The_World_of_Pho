@@ -560,12 +560,7 @@ func _apply_cell_visual(btn: Button, row: int, col: int) -> void:
 	else:
 		var progress := Garden.get_growth_progress(row, col)
 		var remaining: float = Garden.get_effective_harvest_time(plant_type) * (1.0 - progress)
-		if remaining >= 3600:
-			btn.tooltip_text = "%s — %dh %dm left" % [def.get("name", ""), int(remaining / 3600), int(fmod(remaining, 3600) / 60)]
-		elif remaining >= 60:
-			btn.tooltip_text = "%s — %dm %ds left" % [def.get("name", ""), int(remaining / 60), int(fmod(remaining, 60))]
-		else:
-			btn.tooltip_text = "%s — %ds left" % [def.get("name", ""), int(remaining)]
+		btn.tooltip_text = "%s — %s left" % [def.get("name", ""), FormatUtils.format_countdown(remaining)]
 
 
 func _refresh_grid_visuals() -> void:
@@ -926,12 +921,7 @@ func _on_grid_cell_pressed(row: int, col: int) -> void:
 			var def := Garden.get_plant_def(cell["plant_type"])
 			var remaining: float = Garden.get_effective_harvest_time(cell["plant_type"]) * (1.0 - progress)
 
-			var total_seconds := int(remaining)
-			var hours := total_seconds / 3600
-			var mins := (total_seconds % 3600) / 60
-			var secs := total_seconds % 60
-
-			_status_label.text = "%s — %dh %dm %ds remaining" % [def["name"], hours, mins, secs]
+			_status_label.text = "%s — %s remaining" % [def["name"], FormatUtils.format_countdown(remaining)]
 	else:
 		if _selected_seed < 0:
 			_status_label.text = "Select a seed first."
@@ -1047,12 +1037,7 @@ func _on_long_press_triggered() -> void:
 	else:
 		var progress := Garden.get_growth_progress(row, col)
 		var remaining: float = Garden.get_effective_harvest_time(plant_type) * (1.0 - progress)
-		if remaining >= 3600:
-			text = "%s\n⏱ %dh %dm left" % [def["name"], int(remaining / 3600), int(fmod(remaining, 3600) / 60)]
-		elif remaining >= 60:
-			text = "%s\n⏱ %dm %ds left" % [def["name"], int(remaining / 60), int(fmod(remaining, 60))]
-		else:
-			text = "%s\n⏱ %ds left" % [def["name"], int(remaining)]
+		text = "%s\n⏱ %s left" % [def["name"], FormatUtils.format_countdown(remaining)]
 
 	_show_timer_popup(text, row, col)
 
