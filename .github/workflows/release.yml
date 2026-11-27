@@ -44,7 +44,6 @@ jobs:
         run: |
           mkdir -p build/windows
           godot --headless --export-release "Windows Desktop" build/windows/World_of_Pho.exe
-          cd build/windows && zip -r ../../World_of_Pho-windows.zip .
 
       - name: Export Web
         run: |
@@ -57,7 +56,7 @@ jobs:
         with:
           name: windows-and-web-builds
           path: |
-            World_of_Pho-windows.zip
+            build/windows/World_of_Pho.exe
             World_of_Pho-web.zip
 
   export-android:
