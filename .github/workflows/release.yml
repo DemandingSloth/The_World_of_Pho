@@ -52,14 +52,19 @@ jobs:
           godot --headless --export-release "Web" build/web/index.html
           cd build/web && zip -r ../../World_of_Pho-web.zip .
 
-      - name: Upload Windows & Web artifacts
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-and-web-builds
+          name: windows-build
           if-no-files-found: error
-          path: |
-            build/windows/*.exe
-            World_of_Pho-web.zip
+          path: build/windows/*.exe
+
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          if-no-files-found: error
+          path: World_of_Pho-web.zip
 
   export-android:
     name: Export Android (APK & AAB)
@@ -153,10 +158,16 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Download Windows & Web artifacts
+      - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: windows-and-web-builds
+          name: windows-build
+          path: release-assets
+
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
           path: release-assets
 
       - name: Download Android artifacts
