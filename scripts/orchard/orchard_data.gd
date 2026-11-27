@@ -667,6 +667,61 @@ func plant_sapling_flush() -> void:
 	orchard_updated.emit()
 
 
+## Default age for generate_aged_orchard(): about 6 months.
+const AGED_ORCHARD_DAYS := 182.5
+
+
+## TEST/QA (cheat code "SlothsAgedOrchard"): REPLACES the whole current grid
+## (trees and stumps) with a completely filled orchard whose trees were all
+## planted `age_days` ago, so they are fully grown with fruit built up.
+## Cells are split evenly across every tree type. Any remainder from the
+## division goes to the Christmas Conifer (the present tree). Cells are laid out
+## in row-major blocks, one block per type, conifers last.
+## Does NOT touch saplings or the lifetime / achievement planting counters.
+## Returns { tree_type (int) -> count (int) }.
+func generate_aged_orchard(age_days: float = AGED_ORCHARD_DAYS) -> Dictionary:
+	_expand_grid()
+	var total := orchard_rows * orchard_cols
+	var type_count := TREE_DEFS.size()
+	var per_type := floori(float(total) / float(type_count))
+	var remainder := total - per_type * type_count
+
+	## The conifer is the "present" tree; it absorbs the remainder.
+	var conifer_type := type_count - 1
+	for t in range(type_count):
+		if bool(TREE_DEFS[t].get("is_conifer", false)):
+			conifer_type = t
+			break
+
+	## Build the planting order: per_type of each type, remainder as conifers.
+	var order: Array[int] = []
+	var counts: Dictionary = {}
+	for t in range(type_count):
+		if t == conifer_type:
+			continue
+		counts[t] = per_type
+		for i in range(per_type):
+			order.append(t)
+	counts[conifer_type] = per_type + remainder
+	for i in range(per_type + remainder):
+		order.append(conifer_type)
+
+	var plant_time := TrustedClock.now() - age_days * 86400.0
+	var idx := 0
+	for r in range(orchard_rows):
+		for c in range(orchard_cols):
+			grid[r][c] = {
+				"tree_type": order[idx],
+				"plant_time": plant_time,
+				"harvested_count": 0,
+			}
+			idx += 1
+
+	save_data()
+	orchard_updated.emit()
+	return counts
+
+
 func _check_full_orchard_achievements() -> void:
 	var all_filled := true
 	var first_type: int = -1
