@@ -90,3 +90,7 @@ Desktop.ini
 
 # Certain Media
 *.mp4
+
+
+android/build/*
+!android/build/res/
